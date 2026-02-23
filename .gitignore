@@ -1,0 +1,20 @@
+# Object files
+*.o
+
+# Generated ANTLR4 files
+*Lexer.h
+*Lexer.cpp
+*Parser.h
+*Parser.cpp
+*.interp
+*.tokens
+
+# Dependency files
+_antlr
+_deps
+
+# Program binary
+asl
+
+# Generated subdirectory (if used)
+gen/
