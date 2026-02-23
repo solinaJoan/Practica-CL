@@ -142,6 +142,19 @@ std::any TypeCheckVisitor::visitIfStmt(AslParser::IfStmtContext *ctx) {
   TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
   if ((not Types.isErrorTy(t1)) and (not Types.isBooleanTy(t1)))
     Errors.booleanRequired(ctx);
+  visit(ctx->statements(0));
+  if (ctx->statements().size() > 1)
+    visit(ctx->statements(1));
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any TypeCheckVisitor::visitWhileStmt(AslParser::WhileStmtContext *ctx) {
+  DEBUG_ENTER();
+  visit(ctx->expr());
+  TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
+  if ((not Types.isErrorTy(t1)) and (not Types.isBooleanTy(t1)))
+    Errors.booleanRequired(ctx);
   visit(ctx->statements());
   DEBUG_EXIT();
   return 0;
@@ -203,14 +216,24 @@ std::any TypeCheckVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx) {
 
 std::any TypeCheckVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
   DEBUG_ENTER();
+  // Visita la primera expressió
   visit(ctx->expr(0));
+  // Agafa el seu tipus
   TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
+  // Visita la segona expressió
   visit(ctx->expr(1));
+  // Agafa el seu tipus
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
+  // Si hi ha algun error o no son del tipus numèric afegeix un error
   if (((not Types.isErrorTy(t1)) and (not Types.isNumericTy(t1))) or
       ((not Types.isErrorTy(t2)) and (not Types.isNumericTy(t2))))
     Errors.incompatibleOperator(ctx->op);
-  TypesMgr::TypeId t = Types.createIntegerTy();
+
+  // Si no hi ha error (o els dos o són) el resultat és un int o un float. Per defecte un enter
+  TypesMgr::TypeId t;
+  if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) t = Types.createFloatTy();
+  else t = Types.createIntegerTy();
+
   putTypeDecor(ctx, t);
   putIsLValueDecor(ctx, false);
   DEBUG_EXIT();
@@ -224,6 +247,7 @@ std::any TypeCheckVisitor::visitRelational(AslParser::RelationalContext *ctx) {
   visit(ctx->expr(1));
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
   std::string oper = ctx->op->getText();
+  // Si no son errors i no son comparables, afegeix un error
   if ((not Types.isErrorTy(t1)) and (not Types.isErrorTy(t2)) and
       (not Types.comparableTypes(t1, t2, oper)))
     Errors.incompatibleOperator(ctx->op);
@@ -234,9 +258,66 @@ std::any TypeCheckVisitor::visitRelational(AslParser::RelationalContext *ctx) {
   return 0;
 }
 
-std::any TypeCheckVisitor::visitValue(AslParser::ValueContext *ctx) {
+std::any TypeCheckVisitor::visitNot(AslParser::NotContext *ctx) {
+  DEBUG_ENTER();
+  visit(ctx->expr());
+  TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
+  if ((not Types.isErrorTy(t1)) and (not Types.isBooleanTy(t1)))
+    Errors.booleanRequired(ctx);  
+  TypesMgr::TypeId t = Types.createBooleanTy();
+  putTypeDecor(ctx, t);
+  putIsLValueDecor(ctx, false);
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any TypeCheckVisitor::visitLogic(AslParser::LogicContext *ctx) {
+  DEBUG_ENTER();
+  visit(ctx->expr(0));
+  TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
+  visit(ctx->expr(1));
+  TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
+  if (((not Types.isErrorTy(t1)) and (not Types.isBooleanTy(t1))) or
+      ((not Types.isErrorTy(t2)) and (not Types.isBooleanTy(t2))))
+    Errors.incompatibleOperator(ctx->op);
+
+  TypesMgr::TypeId t = Types.createBooleanTy();
+  putTypeDecor(ctx, t);
+  putIsLValueDecor(ctx, false);
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any TypeCheckVisitor::visitIntVal(AslParser::IntValContext *ctx) {
   DEBUG_ENTER();
   TypesMgr::TypeId t = Types.createIntegerTy();
+  putTypeDecor(ctx, t);
+  putIsLValueDecor(ctx, false);
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any TypeCheckVisitor::visitFloatVal(AslParser::FloatValContext *ctx) {
+  DEBUG_ENTER();
+  TypesMgr::TypeId t = Types.createFloatTy();
+  putTypeDecor(ctx, t);
+  putIsLValueDecor(ctx, false);
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any TypeCheckVisitor::visitBoolVal(AslParser::BoolValContext *ctx) {
+  DEBUG_ENTER();
+  TypesMgr::TypeId t = Types.createBooleanTy();
+  putTypeDecor(ctx, t);
+  putIsLValueDecor(ctx, false);
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any TypeCheckVisitor::visitCharVal(AslParser::CharValContext *ctx) {
+  DEBUG_ENTER();
+  TypesMgr::TypeId t = Types.createCharacterTy();
   putTypeDecor(ctx, t);
   putIsLValueDecor(ctx, false);
   DEBUG_EXIT();

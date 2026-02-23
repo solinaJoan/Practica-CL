@@ -113,7 +113,8 @@ std::any CodeGenVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx
   TypesMgr::TypeId   t1 = getTypeDecor(ctx->type());
   std::size_t      size = Types.getSizeOfType(t1);
   DEBUG_EXIT();
-  return var{ctx->ID()->getText(), Types.to_string(t1), size};
+  // TODO: canviar el ID(0) per un bucle amb tots els ID
+  return var{ctx->ID(0)->getText(), Types.to_string(t1), size};
 }
 
 std::any CodeGenVisitor::visitStatements(AslParser::StatementsContext *ctx) {
@@ -151,7 +152,8 @@ std::any CodeGenVisitor::visitIfStmt(AslParser::IfStmtContext *ctx) {
   CodeAttribs     && codAtsE = std::any_cast<CodeAttribs>(visit(ctx->expr()));
   std::string          addr1 = codAtsE.addr;
   instructionList &    code1 = codAtsE.code;
-  instructionList &&   code2 = std::any_cast<instructionList>(visit(ctx->statements()));
+  // TODO: Actualitzar el zero qu ehe posat aqui només perque no peti
+  instructionList &&   code2 = std::any_cast<instructionList>(visit(ctx->statements(0)));
   std::string label = codeCounters.newLabelIF();
   std::string labelEndIf = "endif"+label;
   code = code1 || instruction::FJUMP(addr1, labelEndIf) ||
@@ -253,7 +255,7 @@ std::any CodeGenVisitor::visitRelational(AslParser::RelationalContext *ctx) {
   return codAts;
 }
 
-std::any CodeGenVisitor::visitValue(AslParser::ValueContext *ctx) {
+std::any CodeGenVisitor::visitIntVal(AslParser::IntValContext *ctx) {
   DEBUG_ENTER();
   instructionList code;
   std::string temp = "%"+codeCounters.newTEMP();
@@ -261,6 +263,27 @@ std::any CodeGenVisitor::visitValue(AslParser::ValueContext *ctx) {
   CodeAttribs codAts(temp, "", code);
   DEBUG_EXIT();
   return codAts;
+}
+
+std::any CodeGenVisitor::visitFloatVal(AslParser::FloatValContext *ctx) {
+  DEBUG_ENTER();
+  // TODO
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any CodeGenVisitor::visitBoolVal(AslParser::BoolValContext *ctx) {
+  DEBUG_ENTER();
+  // TODO
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any CodeGenVisitor::visitCharVal(AslParser::CharValContext *ctx) {
+  DEBUG_ENTER();
+  // TODO
+  DEBUG_EXIT();
+  return 0;
 }
 
 std::any CodeGenVisitor::visitExprIdent(AslParser::ExprIdentContext *ctx) {

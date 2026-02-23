@@ -79,7 +79,10 @@ public:
   std::any visitExprIdent(AslParser::ExprIdentContext *ctx);
   std::any visitArithmetic(AslParser::ArithmeticContext *ctx);
   std::any visitRelational(AslParser::RelationalContext *ctx);
-  std::any visitValue(AslParser::ValueContext *ctx);
+  std::any visitIntVal(AslParser::IntValContext *ctx);
+  std::any visitFloatVal(AslParser::FloatValContext *ctx);
+  std::any visitBoolVal(AslParser::BoolValContext *ctx);
+  std::any visitCharVal(AslParser::CharValContext *ctx);
   std::any visitIdent(AslParser::IdentContext *ctx);
 
 private:

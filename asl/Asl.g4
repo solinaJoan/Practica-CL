@@ -38,7 +38,7 @@ program : function+ EOF
 
 // A function has a name, a list of parameters and a list of statements
 function
-        : FUNC ID '(' ')' declarations statements ENDFUNC
+        : FUNC ID '(' params? ')' (':' type)? declarations statements ENDFUNC
         ;
 
 declarations
@@ -46,10 +46,13 @@ declarations
         ;
 
 variable_decl
-        : VAR ID ':' type
+        : VAR ID (',' ID)* ':' type
         ;
 
 type    : INT
+        | FLOAT
+        | BOOL
+        | CHAR
         ;
 
 statements
@@ -61,15 +64,17 @@ statement
           // Assignment
         : left_expr ASSIGN expr ';'           # assignStmt
           // if-then-else statement (else is optional)
-        | IF expr THEN statements ENDIF       # ifStmt
+        | IF expr THEN statements (ELSE statements)? ENDIF       # ifStmt
+        | WHILE expr DO statements ENDWHILE   # whileStmt
           // A function/procedure call has a list of arguments in parenthesis (possibly empty)
-        | ident '(' ')' ';'                   # procCall
+        | ident '(' params? ')' ';'                   # procCall
           // Read a variable
         | READ left_expr ';'                  # readStmt
           // Write an expression
         | WRITE expr ';'                      # writeExpr
           // Write a string
         | WRITE STRING ';'                    # writeString
+        | RETURN expr? ';'                          # return
         ;
 
 // Grammar for left expressions (l-values in C++)
@@ -78,37 +83,69 @@ left_expr
         ;
 
 // Grammar for expressions with boolean, relational and aritmetic operators
-expr    : expr op=MUL expr                    # arithmetic
-        | expr op=PLUS expr                   # arithmetic
-        | expr op=EQUAL expr                  # relational
-        | INTVAL                              # value
-        | ident                               # exprIdent
+expr    : '(' expr ')'                                   # parenthesis
+        | MINUS expr                                     # unary
+        | expr op=(MUL|DIV) expr                         # arithmetic
+        | expr op=(PLUS|MINUS) expr                      # arithmetic
+        | expr op=(EQ|NE|LT|LE|GT|GE) expr               # relational
+        | NOT expr                                       # not
+        | expr op=(AND|OR) expr                          # logic
+        | INTVAL                                         # intVal
+        | FLOATVAL                                       # floatVal
+        | BOOLVAL                                        # boolVal
+        | CHARVAL                                        # charVal
+        | ident                                          # exprIdent
         ;
 
 // Identifiers
 ident   : ID
         ;
 
+// Parameters
+params  : ID ':' type (',' ID ':' type)*             
+        ;
+
 //////////////////////////////////////////////////
 /// Lexer Rules
 //////////////////////////////////////////////////
 
+NOT       : 'not' ;
+AND       : 'and' ;
+OR        : 'or' ;       
 ASSIGN    : '=' ;
-EQUAL     : '==' ;
+EQ        : '==' ;
+NE        : '!=' ;
+LT        : '<' ;
+LE        : '<=' ;
+GT        : '>' ;
+GE        : '>=' ;
 PLUS      : '+' ;
+MINUS     : '-';
 MUL       : '*';
+DIV       : '/';
 VAR       : 'var';
 INT       : 'int';
+FLOAT     : 'float';
+BOOL      : 'bool';
+CHAR      : 'char';
 IF        : 'if' ;
 THEN      : 'then' ;
 ELSE      : 'else' ;
 ENDIF     : 'endif' ;
+WHILE     : 'while' ;
+DO        : 'do' ;
+ENDWHILE  : 'endwhile' ;
 FUNC      : 'func' ;
 ENDFUNC   : 'endfunc' ;
 READ      : 'read' ;
 WRITE     : 'write' ;
-ID        : ('a'..'z'|'A'..'Z') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')* ;
+RETURN    : 'return' ;
+BOOLVAL   : ('true'|'false') ;
 INTVAL    : ('0'..'9')+ ;
+FLOATVAL  : ('0'..'9')+ '.' ('0'..'9')+ ;
+CHARVAL   : '\''('a'..'z'|'A'..'Z'|'0'..'9'|' '|'\''|'\t'|'\n'|'@')'\'';
+ID        : ('a'..'z'|'A'..'Z') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')* ;
+
 
 // Strings (in quotes) with escape sequences
 STRING    : '"' ( ESC_SEQ | ~('\\'|'"') )* '"' ;

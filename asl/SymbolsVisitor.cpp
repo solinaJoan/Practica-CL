@@ -106,13 +106,17 @@ std::any SymbolsVisitor::visitDeclarations(AslParser::DeclarationsContext *ctx) 
 std::any SymbolsVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx) {
   DEBUG_ENTER();
   visit(ctx->type());
-  std::string ident = ctx->ID()->getText();
-  if (Symbols.findInCurrentScope(ident)) {
-    Errors.declaredIdent(ctx->ID());
+  for (auto ident : ctx->ID()) {
+    if (Symbols.findInCurrentScope(ident->getText())) {
+      // Error si redeclarem variables
+      Errors.declaredIdent(ident);
   }
   else {
+      // Mira el tipus de la declaració
     TypesMgr::TypeId t1 = getTypeDecor(ctx->type());
-    Symbols.addLocalVar(ident, t1);
+      // I afegim la variable a la taula de símbols local
+      Symbols.addLocalVar(ident->getText(), t1);
+    }
   }
   DEBUG_EXIT();
   return 0;
@@ -120,10 +124,12 @@ std::any SymbolsVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx
 
 std::any SymbolsVisitor::visitType(AslParser::TypeContext *ctx) {
   DEBUG_ENTER();
-  if (ctx->INT()) {
-    TypesMgr::TypeId t = Types.createIntegerTy();
+  TypesMgr::TypeId t;
+  if (ctx->INT()) t = Types.createIntegerTy();
+  else if (ctx->FLOAT()) t = Types.createFloatTy();
+  else if (ctx->BOOL()) t = Types.createBooleanTy();
+  else if (ctx->CHAR()) Types.createCharacterTy();
     putTypeDecor(ctx, t);
-  }
   DEBUG_EXIT();
   return 0;
 }
@@ -218,6 +224,26 @@ std::any SymbolsVisitor::visitType(AslParser::TypeContext *ctx) {
 //   DEBUG_EXIT();
 //   return r;
 // }
+
+std::any SymbolsVisitor::visitParams(AslParser::ParamsContext *ctx) {
+  DEBUG_ENTER();
+  // Recorrem els paràmetres i el seu tipus
+  for (std::size_t i = 0; i < ctx->ID().size(); ++i) {
+    auto ident = ctx->ID(i);
+    if (Symbols.findInCurrentScope(ident->getText())) {
+      // Error si redeclarem variables
+      Errors.declaredIdent(ident);
+    } else {
+      // Mira el tipus de la declaració
+      TypesMgr::TypeId t1 = getTypeDecor(ctx->type(i));
+      // I afegim la variable a la taula de símbols
+      Symbols.addParameter(ident->getText(), t1);
+    }
+    std::cout << "Param: " << ident->getText() << " Type: " << Types.to_string_basic(getTypeDecor(ctx->type(i))) << std::endl;
+  }
+  DEBUG_EXIT();
+  return 0;
+}
 
 
 // Getters for the necessary tree node atributes:

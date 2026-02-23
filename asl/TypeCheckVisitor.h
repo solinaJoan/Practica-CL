@@ -69,6 +69,7 @@ public:
   std::any visitStatements(AslParser::StatementsContext *ctx);
   std::any visitAssignStmt(AslParser::AssignStmtContext *ctx);
   std::any visitIfStmt(AslParser::IfStmtContext *ctx);
+  std::any visitWhileStmt(AslParser::WhileStmtContext *ctx);
   std::any visitProcCall(AslParser::ProcCallContext *ctx);
   std::any visitReadStmt(AslParser::ReadStmtContext *ctx);
   std::any visitWriteExpr(AslParser::WriteExprContext *ctx);
@@ -77,7 +78,12 @@ public:
   std::any visitExprIdent(AslParser::ExprIdentContext *ctx);
   std::any visitArithmetic(AslParser::ArithmeticContext *ctx);
   std::any visitRelational(AslParser::RelationalContext *ctx);
-  std::any visitValue(AslParser::ValueContext *ctx);
+  std::any visitNot(AslParser::NotContext *ctx);
+  std::any visitLogic(AslParser::LogicContext *ctx);
+  std::any visitIntVal(AslParser::IntValContext *ctx);
+  std::any visitFloatVal(AslParser::FloatValContext *ctx);
+  std::any visitBoolVal(AslParser::BoolValContext *ctx);
+  std::any visitCharVal(AslParser::CharValContext *ctx);
   std::any visitIdent(AslParser::IdentContext *ctx);
 
 private:
