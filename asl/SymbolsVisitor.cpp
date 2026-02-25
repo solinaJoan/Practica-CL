@@ -91,7 +91,20 @@ std::any SymbolsVisitor::visitFunction(AslParser::FunctionContext *ctx) {
   }
   else {
     std::vector<TypesMgr::TypeId> lParamsTy;
-    TypesMgr::TypeId tRet = Types.createVoidTy();
+    // if (ctx->params()) {
+    //   for (std::size_t i = 0; i < ctx->params()->ID().size(); ++i) {
+    //     TypesMgr::TypeId t1 = getTypeDecor(ctx->params()->type(i));
+    //     lParamsTy.push_back(t1);
+    //   }
+    // }
+    TypesMgr::TypeId tRet;
+    if (ctx->type()) {
+      tRet = getTypeDecor(ctx->type());
+      putTypeDecor(ctx, tRet);
+    } else {
+      tRet = Types.createVoidTy();
+      putTypeDecor(ctx, tRet);
+    }
     TypesMgr::TypeId tFunc = Types.createFunctionTy(lParamsTy, tRet);
     Symbols.addFunction(ident, tFunc);
   }

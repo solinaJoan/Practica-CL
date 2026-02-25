@@ -86,7 +86,6 @@ std::any TypeCheckVisitor::visitFunction(AslParser::FunctionContext *ctx) {
   DEBUG_ENTER();
   SymTable::ScopeId sc = getScopeDecor(ctx);
   Symbols.pushThisScope(sc);
-  // Symbols.print();
   visit(ctx->statements());
   Symbols.popScope();
   DEBUG_EXIT();
@@ -214,6 +213,25 @@ std::any TypeCheckVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx) {
   } else {
     visit(ctx->array());
   }
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx) {
+  DEBUG_ENTER();
+  visit(ctx->ident());
+  TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
+  if ((not Types.isErrorTy(t1)) and (not Types.isFunctionTy(t1)))
+    Errors.isNotCallable(ctx->ident());
+
+  TypesMgr::TypeId tRet;
+  if (Types.isFunctionTy(t1)) 
+    tRet = Types.getFuncReturnType(t1);
+  else 
+    tRet = Types.createErrorTy();
+    
+  putTypeDecor(ctx, tRet);
+  putIsLValueDecor(ctx, false);
   DEBUG_EXIT();
   return 0;
 }
@@ -359,6 +377,7 @@ std::any TypeCheckVisitor::visitArray(AslParser::ArrayContext *ctx) {
 std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx) {
   DEBUG_ENTER();
   std::string ident = ctx->getText();
+  // Si no esta declarada, posem un error
   if (Symbols.findInStack(ident) == -1) {
     Errors.undeclaredIdent(ctx->ID());
     TypesMgr::TypeId te = Types.createErrorTy();
