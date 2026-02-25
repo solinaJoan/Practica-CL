@@ -344,14 +344,14 @@ std::any TypeCheckVisitor::visitArray(AslParser::ArrayContext *ctx) {
   visit(ctx->ident());
   TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
   if (not Types.isErrorTy(t1) and not Types.isArrayTy(t1))
-    Errors.nonArrayInArrayAccess(ctx);
-  else putTypeDecor(ctx, Types.getArrayElemType(t1));
-
+    Errors.nonArrayInArrayAccess(ctx->ident());
+  else {
+    putTypeDecor(ctx, Types.getArrayElemType(t1));
+  }
   visit(ctx->expr());
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
   if (not Types.isErrorTy(t2) and not Types.isIntegerTy(t2))
-    Errors.nonIntegerIndexInArrayAccess(ctx);
-  
+    Errors.nonIntegerIndexInArrayAccess(ctx->expr());
   DEBUG_EXIT();
   return 0;
 }
