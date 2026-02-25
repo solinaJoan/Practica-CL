@@ -79,8 +79,11 @@ std::any SymbolsVisitor::visitFunction(AslParser::FunctionContext *ctx) {
   std::string funcName = ctx->ID()->getText();
   SymTable::ScopeId sc = Symbols.pushNewScope(funcName);
   putScopeDecor(ctx, sc);
+  if(ctx->params()) 
+    visit(ctx->params());
+  if (ctx->type())
+    visit(ctx->type());
   visit(ctx->declarations());
-  // Symbols.print();
   Symbols.popScope();
   std::string ident = ctx->ID()->getText();
   if (Symbols.findInCurrentScope(ident)) {
@@ -92,6 +95,7 @@ std::any SymbolsVisitor::visitFunction(AslParser::FunctionContext *ctx) {
     TypesMgr::TypeId tFunc = Types.createFunctionTy(lParamsTy, tRet);
     Symbols.addFunction(ident, tFunc);
   }
+  // Symbols.print();
   DEBUG_EXIT();
   return 0;
 }
@@ -128,8 +132,13 @@ std::any SymbolsVisitor::visitType(AslParser::TypeContext *ctx) {
   if (ctx->INT()) t = Types.createIntegerTy();
   else if (ctx->FLOAT()) t = Types.createFloatTy();
   else if (ctx->BOOL()) t = Types.createBooleanTy();
-  else if (ctx->CHAR()) Types.createCharacterTy();
-    putTypeDecor(ctx, t);
+  else if (ctx->CHAR()) t = Types.createCharacterTy();
+  else if (ctx->ARRAY()) {
+    TypesMgr::TypeId tElem = getTypeDecor(ctx->type());
+    int size = std::stoi(ctx->INTVAL()->getText());
+    t = Types.createArrayTy(size, tElem);
+  }
+  putTypeDecor(ctx, t);
   DEBUG_EXIT();
   return 0;
 }
@@ -239,7 +248,6 @@ std::any SymbolsVisitor::visitParams(AslParser::ParamsContext *ctx) {
       // I afegim la variable a la taula de símbols
       Symbols.addParameter(ident->getText(), t1);
     }
-    std::cout << "Param: " << ident->getText() << " Type: " << Types.to_string_basic(getTypeDecor(ctx->type(i))) << std::endl;
   }
   DEBUG_EXIT();
   return 0;
