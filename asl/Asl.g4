@@ -80,13 +80,13 @@ statement
 
 // Grammar for left expressions (l-values in C++)
 left_expr 
-        : ID '[' expr ']'
+        : array
         | ident
         ;
 
 // Grammar for expressions with boolean, relational and aritmetic operators
 expr    : '(' expr ')'                                   # parenthesis
-        | ID '[' expr ']'                              # arrayAccess
+        | array                                          # arrayAccess
         | MINUS expr                                     # unary
         | expr op=(MUL|DIV) expr                         # arithmetic
         | expr op=(PLUS|MINUS) expr                      # arithmetic
@@ -98,6 +98,10 @@ expr    : '(' expr ')'                                   # parenthesis
         | BOOLVAL                                        # boolVal
         | CHARVAL                                        # charVal
         | ident                                          # exprIdent
+        ;
+
+// Array
+array   : ident '[' expr ']'
         ;
 
 // Identifiers

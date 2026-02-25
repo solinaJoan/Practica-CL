@@ -84,6 +84,7 @@ public:
   std::any visitFloatVal(AslParser::FloatValContext *ctx);
   std::any visitBoolVal(AslParser::BoolValContext *ctx);
   std::any visitCharVal(AslParser::CharValContext *ctx);
+  std::any visitArray(AslParser::ArrayContext *ctx);
   std::any visitIdent(AslParser::IdentContext *ctx);
 
 private:
