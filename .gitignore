@@ -18,3 +18,6 @@ asl
 
 # Generated subdirectory (if used)
 gen/
+
+# Makefile
+Makefile
