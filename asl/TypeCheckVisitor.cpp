@@ -202,6 +202,23 @@ std::any TypeCheckVisitor::visitWriteExpr(AslParser::WriteExprContext *ctx) {
 //   return r;
 // }
 
+std::any TypeCheckVisitor::visitReturn(AslParser::ReturnContext *ctx) {
+  DEBUG_ENTER();
+  if (ctx->expr()) {
+    visit(ctx->expr());
+    std::string funcName = "";
+    if (Symbols.isFunctionClass(funcName)) {
+      TypesMgr::TypeId tFunc = Symbols.getGlobalFunctionType(funcName);
+      TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr());
+      if ((not Types.isErrorTy(tFunc)) and (not Types.isErrorTy(tExpr)) and (not Types.copyableTypes(tFunc, tExpr)))
+        Errors.incompatibleReturn(ctx->RETURN());
+    }
+  }
+  // Symbols.print();
+  DEBUG_EXIT();
+  return 0;
+}
+
 std::any TypeCheckVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx) {
   DEBUG_ENTER();
   if (ctx->ident()){
@@ -223,15 +240,16 @@ std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx
   TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
   if ((not Types.isErrorTy(t1)) and (not Types.isFunctionTy(t1)))
     Errors.isNotCallable(ctx->ident());
-
-  TypesMgr::TypeId tRet;
-  if (Types.isFunctionTy(t1)) 
-    tRet = Types.getFuncReturnType(t1);
-  else 
-    tRet = Types.createErrorTy();
+  else {
+    TypesMgr::TypeId tRet;
+    if (Types.isFunctionTy(t1)) 
+      tRet = Types.getFuncReturnType(t1);
+    else 
+      tRet = Types.createVoidTy();
+    putTypeDecor(ctx, tRet);
+    putIsLValueDecor(ctx, false);
+  }
     
-  putTypeDecor(ctx, tRet);
-  putIsLValueDecor(ctx, false);
   DEBUG_EXIT();
   return 0;
 }

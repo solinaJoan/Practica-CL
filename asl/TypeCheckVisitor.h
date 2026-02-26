@@ -73,6 +73,7 @@ public:
   std::any visitProcCall(AslParser::ProcCallContext *ctx);
   std::any visitReadStmt(AslParser::ReadStmtContext *ctx);
   std::any visitWriteExpr(AslParser::WriteExprContext *ctx);
+  std::any visitReturn(AslParser::ReturnContext *ctx);
   // std::any visitWriteString(AslParser::WriteStringContext *ctx);
   std::any visitLeft_expr(AslParser::Left_exprContext *ctx);
   std::any visitExprIdent(AslParser::ExprIdentContext *ctx);
