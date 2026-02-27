@@ -87,6 +87,14 @@ std::any TypeCheckVisitor::visitFunction(AslParser::FunctionContext *ctx) {
   SymTable::ScopeId sc = getScopeDecor(ctx);
   Symbols.pushThisScope(sc);
   visit(ctx->statements());
+  if (ctx->type()) {
+    visit(ctx->type());
+    TypesMgr::TypeId t = getTypeDecor(ctx->type());
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
+    std::cout << "Aqui entrem amb la funcio " << ctx->ID()->getText() << std::endl;
+    std::cout << "I li posem el tipus " << Types.to_string_basic(t) << std::endl;
+  }
   Symbols.popScope();
   DEBUG_EXIT();
   return 0;
@@ -127,8 +135,10 @@ std::any TypeCheckVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx) {
   TypesMgr::TypeId t1 = getTypeDecor(ctx->left_expr());
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
   if ((not Types.isErrorTy(t1)) and (not Types.isErrorTy(t2)) and
-      (not Types.copyableTypes(t1, t2)))
-    Errors.incompatibleAssignment(ctx->ASSIGN());
+      (not Types.copyableTypes(t1, t2))) {
+        Errors.incompatibleAssignment(ctx->ASSIGN());
+        std::cout << Types.to_string_basic(t1) << " " << Types.to_string_basic(t2) << std::endl;
+      }
   if ((not Types.isErrorTy(t1)) and (not getIsLValueDecor(ctx->left_expr())))
     Errors.nonReferenceableLeftExpr(ctx->left_expr());
   DEBUG_EXIT();
@@ -251,6 +261,8 @@ std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx
   // Si no es un error, mirem coses. Si és un error, el passem cap amunt
   if (not Types.isErrorTy(t) and not Symbols.isFunctionClass(ctx->ident()->getText()))
       Errors.isNotCallable(ctx->ident());
+  
+  std::cout << "Tipus ident funcio " << Types.to_string_basic(t) << std::endl;
   putTypeDecor(ctx, t);
   putIsLValueDecor(ctx, false);
   DEBUG_EXIT();
@@ -408,10 +420,11 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx) {
   else {
     TypesMgr::TypeId t1 = Symbols.getType(ident);
     putTypeDecor(ctx, t1);
-    if (Symbols.isFunctionClass(ident))
+    if (Symbols.isFunctionClass(ident)) {
+      std::cout << "A la funció li posem el tipus: " << Types.to_string_basic(t1) << std::endl;
       putIsLValueDecor(ctx, false);
-    else
-      putIsLValueDecor(ctx, true);
+    }
+    else putIsLValueDecor(ctx, true);
   }
   DEBUG_EXIT();
   return 0;
