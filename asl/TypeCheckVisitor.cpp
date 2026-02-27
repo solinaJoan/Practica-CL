@@ -234,22 +234,25 @@ std::any TypeCheckVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx) {
   return 0;
 }
 
+std::any TypeCheckVisitor::visitParenthesis(AslParser::ParenthesisContext *ctx) {
+  DEBUG_ENTER();
+  visit(ctx->expr());
+  TypesMgr::TypeId t = getTypeDecor(ctx->expr());
+  putTypeDecor(ctx, t);
+  putIsLValueDecor(ctx, false);
+  DEBUG_EXIT();
+  return 0;
+}
+
 std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx) {
   DEBUG_ENTER();
   visit(ctx->ident());
-  TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
-  if ((not Types.isErrorTy(t1)) and (not Types.isFunctionTy(t1)))
-    Errors.isNotCallable(ctx->ident());
-  else {
-    TypesMgr::TypeId tRet;
-    if (Types.isFunctionTy(t1)) 
-      tRet = Types.getFuncReturnType(t1);
-    else 
-      tRet = Types.createVoidTy();
-    putTypeDecor(ctx, tRet);
-    putIsLValueDecor(ctx, false);
-  }
-    
+  TypesMgr::TypeId t = getTypeDecor(ctx->ident());
+  // Si no es un error, mirem coses. Si és un error, el passem cap amunt
+  if (not Types.isErrorTy(t) and not Symbols.isFunctionClass(ctx->ident()->getText()))
+      Errors.isNotCallable(ctx->ident());
+  putTypeDecor(ctx, t);
+  putIsLValueDecor(ctx, false);
   DEBUG_EXIT();
   return 0;
 }
