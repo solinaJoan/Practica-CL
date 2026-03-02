@@ -79,10 +79,9 @@ std::any SymbolsVisitor::visitFunction(AslParser::FunctionContext *ctx) {
   std::string funcName = ctx->ID()->getText();
   SymTable::ScopeId sc = Symbols.pushNewScope(funcName);
   putScopeDecor(ctx, sc);
-  if(ctx->params()) 
-    visit(ctx->params());
-  if (ctx->type())
-    visit(ctx->type());
+  // Visitem els paràmetres i el tipus de la funció
+  if (ctx->params()) visit(ctx->params());
+  if (ctx->type()) visit(ctx->type());
   visit(ctx->declarations());
   Symbols.popScope();
   std::string ident = ctx->ID()->getText();
@@ -92,17 +91,10 @@ std::any SymbolsVisitor::visitFunction(AslParser::FunctionContext *ctx) {
   else {
     std::vector<TypesMgr::TypeId> lParamsTy;
     TypesMgr::TypeId tRet;
-
-    if (ctx->type()) {
-      tRet = getTypeDecor(ctx->type());
-    } else {
-      tRet = Types.createVoidTy();
-    }
+    if (ctx->type()) tRet = getTypeDecor(ctx->type());
+    else tRet = Types.createVoidTy();
     TypesMgr::TypeId tFunc = Types.createFunctionTy(lParamsTy, tRet);
-    std::cout << "1: " << Types.to_string_basic(tFunc) << std::endl;
-    std::cout << "2: " << Types.to_string_basic(tRet) << std::endl;
     Symbols.addFunction(ident, tFunc);
-    putTypeDecor(ctx, tFunc);
   }
   // Symbols.print();
   DEBUG_EXIT();
@@ -126,7 +118,7 @@ std::any SymbolsVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx
   }
   else {
       // Mira el tipus de la declaració
-    TypesMgr::TypeId t1 = getTypeDecor(ctx->type());
+      TypesMgr::TypeId t1 = getTypeDecor(ctx->type());
       // I afegim la variable a la taula de símbols local
       Symbols.addLocalVar(ident->getText(), t1);
     }
