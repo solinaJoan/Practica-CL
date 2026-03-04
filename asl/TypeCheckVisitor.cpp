@@ -167,10 +167,8 @@ std::any TypeCheckVisitor::visitWhileStmt(AslParser::WhileStmtContext *ctx) {
 std::any TypeCheckVisitor::visitProcCall(AslParser::ProcCallContext *ctx) {
   DEBUG_ENTER();
   visit(ctx->ident());
-  TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
-  if (Types.isErrorTy(t1)) {
-    ;
-  } else if (not Types.isFunctionTy(t1)) {
+  TypesMgr::TypeId t1 = getTypeDecor(ctx->ident()); 
+  if (not Types.isErrorTy(t1) and not Types.isFunctionTy(t1)) {
     Errors.isNotCallable(ctx->ident());
   }
   DEBUG_EXIT();
@@ -252,19 +250,22 @@ std::any TypeCheckVisitor::visitParenthesis(AslParser::ParenthesisContext *ctx) 
 std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx) {
   DEBUG_ENTER();
   visit(ctx->ident());
-  TypesMgr::TypeId t = Symbols.getType(ctx->ident()->getText());
-  
+  // TypesMgr::TypeId t = Symbols.getType(ctx->ident()->getText());
+  TypesMgr::TypeId t = getTypeDecor(ctx->ident());
   // Si no es un error, mirem coses. Si és un error, el passem cap amunt
-  if (not Types.isErrorTy(t) and not Symbols.isFunctionClass(ctx->ident()->getText()))
+  if (not Types.isErrorTy(t)) {
+    if (not Types.isFunctionTy(t)) {
       Errors.isNotCallable(ctx->ident());
-  else {
-    // TypesMgr::TypeId tRet = Types.getFuncReturnType(t);
-    std::cout << "Tipus ident funcio " << Types.to_string_basic(t) << std::endl;
-    // std::cout << "Tipus ident funcio " << Types.to_string_basic(tRet) << std::endl;
-    putTypeDecor(ctx, t);
-    putIsLValueDecor(ctx, false);
+    }
+    else {
+      TypesMgr::TypeId tRet = Types.getFuncReturnType(t);
+      std::cout << "Tipus ident funcio " << Types.to_string_basic(t) << std::endl;
+      std::cout << "Tipus ident funcio " << Types.to_string_basic(tRet) << std::endl;
+      
+    }
   }
-  
+  putTypeDecor(ctx, t);
+  putIsLValueDecor(ctx, false);
   DEBUG_EXIT();
   return 0;
 }
