@@ -358,4 +358,14 @@ public interface AslListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitParams(AslParser.ParamsContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link AslParser#lParams}.
+	 * @param ctx the parse tree
+	 */
+	void enterLParams(AslParser.LParamsContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link AslParser#lParams}.
+	 * @param ctx the parse tree
+	 */
+	void exitLParams(AslParser.LParamsContext ctx);
 }

@@ -383,6 +383,18 @@ public class AslBaseListener implements AslListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitParams(AslParser.ParamsContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterLParams(AslParser.LParamsContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitLParams(AslParser.LParamsContext ctx) { }
 
 	/**
 	 * {@inheritDoc}

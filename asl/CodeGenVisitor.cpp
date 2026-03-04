@@ -214,13 +214,6 @@ std::any CodeGenVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx) {
   return codAts;
 }
 
-std::any CodeGenVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx) {
-  DEBUG_ENTER();
-  // TODO
-  DEBUG_EXIT();
-  return 0;
-}
-
 std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
   DEBUG_ENTER();
   CodeAttribs     && codAt1 = std::any_cast<CodeAttribs>(visit(ctx->expr(0)));

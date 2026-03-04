@@ -130,7 +130,10 @@ std::any TypeCheckVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx) {
   visit(ctx->expr());
   TypesMgr::TypeId t1 = getTypeDecor(ctx->left_expr());
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
-  if ((not Types.isErrorTy(t1)) and (not Types.isErrorTy(t2)) and
+  if (not Types.isErrorTy(t2) and Types.isVoidTy(t2))
+    Errors.isNotFunction(ctx->expr());
+
+  else if ((not Types.isErrorTy(t1)) and (not Types.isErrorTy(t2)) and
       (not Types.copyableTypes(t1, t2))) {
         Errors.incompatibleAssignment(ctx->ASSIGN());
       }
@@ -250,7 +253,6 @@ std::any TypeCheckVisitor::visitParenthesis(AslParser::ParenthesisContext *ctx) 
 std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx) {
   DEBUG_ENTER();
   visit(ctx->ident());
-  // TypesMgr::TypeId t = Symbols.getType(ctx->ident()->getText());
   TypesMgr::TypeId t = getTypeDecor(ctx->ident());
   // Si no es un error, mirem coses. Si és un error, el passem cap amunt
   if (not Types.isErrorTy(t)) {
@@ -259,13 +261,10 @@ std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx
     }
     else {
       TypesMgr::TypeId tRet = Types.getFuncReturnType(t);
-      std::cout << "Tipus ident funcio " << Types.to_string_basic(t) << std::endl;
-      std::cout << "Tipus ident funcio " << Types.to_string_basic(tRet) << std::endl;
-      
+      putTypeDecor(ctx, tRet);
+      putIsLValueDecor(ctx, false);
     }
   }
-  putTypeDecor(ctx, t);
-  putIsLValueDecor(ctx, false);
   DEBUG_EXIT();
   return 0;
 }
