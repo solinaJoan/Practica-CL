@@ -246,6 +246,8 @@ std::any SymbolsVisitor::visitParams(AslParser::ParamsContext *ctx) {
   // Recorrem els paràmetres i el seu tipus
   for (std::size_t i = 0; i < ctx->ID().size(); ++i) {
     auto ident = ctx->ID(i);
+    visit(ctx->ID(i));
+    visit(ctx->type(i));
     if (Symbols.findInCurrentScope(ident->getText())) {
       // Error si redeclarem variables
       Errors.declaredIdent(ident);

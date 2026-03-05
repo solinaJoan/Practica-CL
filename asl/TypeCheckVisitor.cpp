@@ -86,9 +86,11 @@ std::any TypeCheckVisitor::visitFunction(AslParser::FunctionContext *ctx) {
   DEBUG_ENTER();
   SymTable::ScopeId sc = getScopeDecor(ctx);
   Symbols.pushThisScope(sc);
+  TypesMgr::TypeId t;
+  if (ctx->type()) t = getTypeDecor(ctx->type());
+  else t = Types.createVoidTy();
+  setCurrentFunctionTy(t);
   visit(ctx->statements());
-  TypesMgr::TypeId t = getTypeDecor(ctx->type());
-
   putTypeDecor(ctx, t);
   putIsLValueDecor(ctx, false);
   Symbols.popScope();
@@ -210,15 +212,17 @@ std::any TypeCheckVisitor::visitWriteExpr(AslParser::WriteExprContext *ctx) {
 
 std::any TypeCheckVisitor::visitReturn(AslParser::ReturnContext *ctx) {
   DEBUG_ENTER();
+  TypesMgr::TypeId t1 = getCurrentFunctionTy();
   if (ctx->expr()) {
     visit(ctx->expr());
-    std::string funcName = "";
-    if (Symbols.isFunctionClass(funcName)) {
-      TypesMgr::TypeId tFunc = Symbols.getGlobalFunctionType(funcName);
-      TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr());
-      if ((not Types.isErrorTy(tFunc)) and (not Types.isErrorTy(tExpr)) and (not Types.copyableTypes(tFunc, tExpr)))
-        Errors.incompatibleReturn(ctx->RETURN());
-    }
+    TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
+    // Hem de comprovar que sigui del mateix tipus que la funció
+    if (not Types.isErrorTy(t1) and not Types.isErrorTy(t2) and not Types.copyableTypes(t1, t2))
+      Errors.incompatibleReturn(ctx->RETURN());
+  } else {
+    // Si no hi ha expressió i no es void, també donem error   
+    if (not Types.isErrorTy(t1) and not Types.isVoidTy(t1))
+      Errors.incompatibleReturn(ctx->RETURN());
   }
   // Symbols.print();
   DEBUG_EXIT();
@@ -260,6 +264,7 @@ std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx
       Errors.isNotCallable(ctx->ident());
     }
     else {
+      if (ctx->lParams()) visit(ctx->lParams());
       TypesMgr::TypeId tRet = Types.getFuncReturnType(t);
       putTypeDecor(ctx, tRet);
       putIsLValueDecor(ctx, false);
@@ -396,9 +401,12 @@ std::any TypeCheckVisitor::visitArray(AslParser::ArrayContext *ctx) {
   TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
   if (not Types.isErrorTy(t1) and not Types.isArrayTy(t1))
     Errors.nonArrayInArrayAccess(ctx->ident());
-  else {
-    putTypeDecor(ctx, Types.getArrayElemType(t1));
-  }
+
+  TypesMgr::TypeId tElemArray;
+  if (Types.isArrayTy(t1)) tElemArray = Types.getArrayElemType(t1);
+  else tElemArray = Types.createErrorTy();
+  putTypeDecor(ctx, tElemArray);
+
   visit(ctx->expr());
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
   if (not Types.isErrorTy(t2) and not Types.isIntegerTy(t2))
@@ -425,6 +433,19 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx) {
     }
     else putIsLValueDecor(ctx, true);
   }
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any TypeCheckVisitor::visitLParams(AslParser::LParamsContext *ctx) {
+  DEBUG_ENTER();
+
+  // std::size_t n = Types.getNumOfParameters(t);
+  // for (std::size_t i = 0; i < n; ++i) {
+  //   TypesMgr::TypeId tParamFunction = Types.getParameterType(t,i);
+  //   TypesMgr::TypeId tParam = getTypeDecor(ctx->lparams(i));
+  //   if ()
+  // }
   DEBUG_EXIT();
   return 0;
 }
