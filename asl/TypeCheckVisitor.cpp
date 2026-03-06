@@ -258,17 +258,52 @@ std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx
   DEBUG_ENTER();
   visit(ctx->ident());
   TypesMgr::TypeId t = getTypeDecor(ctx->ident());
-  // Si no es un error, mirem coses. Si és un error, el passem cap amunt
-  if (not Types.isErrorTy(t)) {
-    if (not Types.isFunctionTy(t)) {
-      Errors.isNotCallable(ctx->ident());
+  // Si no es error i no es funció -> notCallable
+  if (not Types.isErrorTy(t) and not Types.isFunctionTy(t)) 
+    Errors.isNotCallable(ctx->ident());
+
+  // Si te parametres
+  if (ctx->lParams())  {
+    std::size_t nParamsFunction = Types.isFunctionTy(t) ? Types.getNumOfParameters(t) : 0;
+    std::size_t nParamsCall = ctx->lParams()->expr().size();
+    // Nomes traiem error de quantitat de parametres diferent si es funcio
+    if (Types.isFunctionTy(t) and nParamsFunction != nParamsCall) {
+      Errors.numberOfParameters(ctx->ident());
     }
-    else {
-      if (ctx->lParams()) visit(ctx->lParams());
-      TypesMgr::TypeId tRet = Types.getFuncReturnType(t);
-      putTypeDecor(ctx, tRet);
-      putIsLValueDecor(ctx, false);
+    // Visitem igualment les expressions de la llista de paràmetres 
+    for (std::size_t i = 0; i < nParamsCall; ++i) {
+      visit(ctx->lParams()->expr(i));
+      if (i < nParamsFunction) {
+        TypesMgr::TypeId tParamFunction = getTypeDecor(ctx->lParams()->expr(i));
+        TypesMgr::TypeId tParamCall = Types.getParameterType(t,i);
+        std::cout << "Crida: Tipus: " << Types.to_string_basic(tParamFunction) << " Text: " << ctx->lParams()->expr(i)->getText() << std::endl;
+        std::cout << "Funcio real: Tipus: " << Types.to_string_basic(tParamCall) << std::endl;
+        if (not Types.equalTypes(tParamFunction, tParamCall)) {
+          Errors.incompatibleParameter(ctx->lParams()->expr(i), i + 1, ctx->ident());
+        }
+      }
     }
+  }
+
+  if (Types.isFunctionTy(t)) {
+    TypesMgr::TypeId tRet = Types.getFuncReturnType(t);
+    putTypeDecor(ctx, tRet);
+    putIsLValueDecor(ctx, false);
+  }
+
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any TypeCheckVisitor::visitUnary(AslParser::UnaryContext *ctx) {
+  DEBUG_ENTER();
+  visit(ctx->expr());
+  TypesMgr::TypeId t = getTypeDecor(ctx->expr());
+  if ((not Types.isErrorTy(t)) and (not Types.isNumericTy(t)))
+    Errors.incompatibleOperator(ctx->op);
+  else {
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
   }
   DEBUG_EXIT();
   return 0;
@@ -439,13 +474,14 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx) {
 
 std::any TypeCheckVisitor::visitLParams(AslParser::LParamsContext *ctx) {
   DEBUG_ENTER();
-
+  // S'ha de recuperar la funció que estem cridant i 
   // std::size_t n = Types.getNumOfParameters(t);
   // for (std::size_t i = 0; i < n; ++i) {
   //   TypesMgr::TypeId tParamFunction = Types.getParameterType(t,i);
-  //   TypesMgr::TypeId tParam = getTypeDecor(ctx->lparams(i));
+  //   TypesMgr::TypeId tParam = getTypeDecor(ctx->lparams()->expr(i));
   //   if ()
   // }
+  visitChildren(ctx);
   DEBUG_EXIT();
   return 0;
 }

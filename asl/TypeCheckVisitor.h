@@ -78,6 +78,7 @@ public:
   std::any visitLeft_expr(AslParser::Left_exprContext *ctx);
   std::any visitParenthesis(AslParser::ParenthesisContext *ctx);
   std::any visitFunctionCall(AslParser::FunctionCallContext *ctx);
+  std::any visitUnary(AslParser::UnaryContext *ctx);
   std::any visitArithmetic(AslParser::ArithmeticContext *ctx);
   std::any visitRelational(AslParser::RelationalContext *ctx);
   std::any visitNot(AslParser::NotContext *ctx);
