@@ -88,7 +88,7 @@ expr    : '(' expr ')'                                   # parenthesis
         | ident '(' lParams? ')'                         # functionCall
         | array                                          # arrayAccess
         | op=MINUS expr                                  # unary
-        | expr op=(MUL|DIV) expr                         # arithmetic
+        | expr op=(MUL|DIV|MOD) expr                         # arithmetic
         | expr op=(PLUS|MINUS) expr                      # arithmetic
         | expr op=(EQ|NE|LT|LE|GT|GE) expr               # relational
         | NOT expr                                       # not
@@ -133,6 +133,7 @@ PLUS      : '+' ;
 MINUS     : '-';
 MUL       : '*';
 DIV       : '/';
+MOD       : '%';
 VAR       : 'var';
 INT       : 'int';
 FLOAT     : 'float';

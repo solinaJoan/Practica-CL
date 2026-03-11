@@ -397,17 +397,37 @@ std::any TypeCheckVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx)
     visit(ctx->expr(1));
     // Agafa el seu tipus
     TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
-    // Si hi ha algun error o no son del tipus numèric afegeix un error
-    if (((not Types.isErrorTy(t1)) and (not Types.isNumericTy(t1))) or
-        ((not Types.isErrorTy(t2)) and (not Types.isNumericTy(t2))))
-        Errors.incompatibleOperator(ctx->op);
 
-    // Si no hi ha error (o els dos o són) el resultat és un int o un float. Per defecte un enter
-    TypesMgr::TypeId t;
-    if (Types.isFloatTy(t1) or Types.isFloatTy(t2))
-        t = Types.createFloatTy();
+    bool isMod = (ctx->op->getText() == "%");
+
+    if (isMod)
+    {
+        // El mòdul exigeix estrictament enters
+        if (((not Types.isErrorTy(t1)) and (not Types.isIntegerTy(t1))) or
+            ((not Types.isErrorTy(t2)) and (not Types.isIntegerTy(t2))))
+            Errors.incompatibleOperator(ctx->op);
+    }
     else
+    {
+        // Multiplicació i divisió permeten qualsevol numèric
+        if (((not Types.isErrorTy(t1)) and (not Types.isNumericTy(t1))) or
+            ((not Types.isErrorTy(t2)) and (not Types.isNumericTy(t2))))
+            Errors.incompatibleOperator(ctx->op);
+    }
+
+    // Assignem el tipus resultant
+    TypesMgr::TypeId t;
+    if (isMod)
+    {
         t = Types.createIntegerTy();
+    }
+    else
+    {
+        if (Types.isFloatTy(t1) or Types.isFloatTy(t2))
+            t = Types.createFloatTy();
+        else
+            t = Types.createIntegerTy();
+    }
 
     putTypeDecor(ctx, t);
     putIsLValueDecor(ctx, false);
