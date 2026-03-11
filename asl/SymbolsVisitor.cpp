@@ -141,6 +141,7 @@ std::any SymbolsVisitor::visitType(AslParser::TypeContext *ctx) {
   else if (ctx->BOOL()) t = Types.createBooleanTy();
   else if (ctx->CHAR()) t = Types.createCharacterTy();
   else if (ctx->ARRAY()) {
+    visit(ctx->type());
     TypesMgr::TypeId tElem = getTypeDecor(ctx->type());
     int size = std::stoi(ctx->INTVAL()->getText());
     t = Types.createArrayTy(size, tElem);

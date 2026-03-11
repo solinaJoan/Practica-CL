@@ -227,7 +227,7 @@ ifneq ($(strip $(GENERATED) ),)
 	-rm -rf $(GENERATED)
 endif
 pristine	: realclean
-	-rm -rf $(PROGRAM) _antlr
+	-rm -rf $(PROGRAM) _antlr .antlr
 #	-rm -rf $(PROGRAM) _antlr _deps
 
 # -------------------------------------------
