@@ -207,7 +207,7 @@ std::any TypeCheckVisitor::visitProcCall(AslParser::ProcCallContext *ctx)
                 TypesMgr::TypeId tParamFunction = getTypeDecor(ctx->lParams()->expr(i));
                 TypesMgr::TypeId tParamCall = Types.getParameterType(t1, i);
 
-                if (not Types.isErrorTy(tParamFunction) and not Types.equalTypes(tParamFunction, tParamCall))
+                if (not Types.isErrorTy(tParamFunction) and not Types.copyableTypes(tParamCall, tParamFunction))
                 {
                     Errors.incompatibleParameter(ctx->lParams()->expr(i), i + 1, ctx->ident());
                 }
@@ -344,7 +344,7 @@ std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx
                 TypesMgr::TypeId tParamFunction = getTypeDecor(ctx->lParams()->expr(i));
                 TypesMgr::TypeId tParamCall = Types.getParameterType(t, i);
 
-                if (not Types.isErrorTy(tParamFunction) and not Types.equalTypes(tParamFunction, tParamCall))
+                if (not Types.isErrorTy(tParamFunction) and not Types.copyableTypes(tParamCall, tParamFunction))
                 {
                     Errors.incompatibleParameter(ctx->lParams()->expr(i), i + 1, ctx->ident());
                 }
