@@ -88,11 +88,12 @@ expr    : '(' expr ')'                                   # parenthesis
         | ident '(' lParams? ')'                         # functionCall
         | array                                          # arrayAccess
         | op=MINUS expr                                  # unary
-        | expr op=(MUL|DIV|MOD) expr                         # arithmetic
+        | expr op=(MUL|DIV|MOD) expr                     # arithmetic
         | expr op=(PLUS|MINUS) expr                      # arithmetic
         | expr op=(EQ|NE|LT|LE|GT|GE) expr               # relational
-        | NOT expr                                       # not
-        | expr op=(AND|OR) expr                          # logic
+        | op=NOT expr                                    # not
+        | expr op=AND expr                               # logic
+        | expr op=OR expr                                # logic
         | INTVAL                                         # intVal
         | FLOATVAL                                       # floatVal
         | BOOLVAL                                        # boolVal

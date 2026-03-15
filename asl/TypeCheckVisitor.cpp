@@ -460,7 +460,7 @@ std::any TypeCheckVisitor::visitNot(AslParser::NotContext *ctx)
     visit(ctx->expr());
     TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
     if ((not Types.isErrorTy(t1)) and (not Types.isBooleanTy(t1)))
-        Errors.booleanRequired(ctx);
+        Errors.incompatibleOperator(ctx->op);
     TypesMgr::TypeId t = Types.createBooleanTy();
     putTypeDecor(ctx, t);
     putIsLValueDecor(ctx, false);
