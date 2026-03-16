@@ -1,0 +1,18 @@
+Line 3:21 error: Identifier 'z' is undeclared.
+Line 7:23 error: Operator '+' with incompatible types.
+Line 7:27 error: Operator '!=' with incompatible types.
+Line 18:4 error: Assignment with incompatible types.
+Line 18:11 error: Operator 'or' with incompatible types.
+Line 18:15 error: Operator '>' with incompatible types.
+Line 21:4 error: Assignment with incompatible types.
+Line 21:38 error: Operator 'or' with incompatible types.
+Line 22:4 error: Assignment with incompatible types.
+Line 22:6 error: `any-cast' requires an expression of type `any`.
+Line 22:21 error: The number of parameters in the call to 'f' does not match.
+Line 22:34 error: Operator '+' with incompatible types.
+Line 23:42 error: Operator 'and' with incompatible types.
+Line 23:46 error: Operator 'not' with incompatible types.
+Line 24:7 error: Assignment with incompatible types.
+Line 25:10 error: Assignment with incompatible types.
+Line 25:12 error: `any-cast' requires an expression of type `any`.
+Line 25:42 error: Operator 'and' with incompatible types.

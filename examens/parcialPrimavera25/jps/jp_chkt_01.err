@@ -1,0 +1,8 @@
+Line 3:17 error: Operator 'not' with incompatible types.
+Line 18:4 error: Assignment with incompatible types.
+Line 18:11 error: Operator 'or' with incompatible types.
+Line 18:15 error: Operator '>' with incompatible types.
+Line 21:22 error: Operator '+' with incompatible types.
+Line 24:28 error: Operator 'and' with incompatible types.
+Line 24:32 error: Operator 'not' with incompatible types.
+Line 26:10 error: Assignment with incompatible types.

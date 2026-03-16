@@ -1,0 +1,14 @@
+Line 11:16 error: Assignment with incompatible types.
+Line 12:20 error: Assignment with incompatible types.
+Line 12:22 error: Array slice with invalid limits.
+Line 13:9 error: Array slice with invalid limits.
+Line 14:9 error: Array slice with invalid limits.
+Line 15:7 error: Assignment with incompatible types.
+Line 15:9 error: Array slice with invalid limits.
+Line 17:7 error: Assignment with incompatible types.
+Line 17:9 error: Array slice with invalid limits.
+Line 18:7 error: Assignment with incompatible types.
+Line 24:2 error: Array access to a non array operand.
+Line 24:15 error: Array slice with invalid limits.
+Line 24:27 error: Array access to a non array operand.
+Line 24:46 error: Array access to a non array operand.

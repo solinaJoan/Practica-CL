@@ -1,0 +1,15 @@
+Line 13:8 error: Array access to a non array operand.
+Line 14:8 error: Array access to a non array operand.
+Line 14:28 error: Array access to a non array operand.
+Line 15:12 error: Array access to a non array operand.
+Line 18:17 error: Array access to a non array operand.
+Line 20:16 error: Assignment with incompatible types.
+Line 26:2 error: Array access to a non array operand.
+Line 26:22 error: Array access to a non array operand.
+Line 26:41 error: Array access to a non array operand.
+Line 27:2 error: Array access to a non array operand.
+Line 27:22 error: Array access to a non array operand.
+Line 29:4 error: Assignment with incompatible types.
+Line 30:13 error: Assignment with incompatible types.
+Line 33:4 error: Assignment with incompatible types.
+Line 34:10 error: Assignment with incompatible types.

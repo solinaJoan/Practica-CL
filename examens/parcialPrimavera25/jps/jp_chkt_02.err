@@ -1,0 +1,13 @@
+Line 7:17 error: Operator 'not' with incompatible types.
+Line 22:4 error: Assignment with incompatible types.
+Line 22:11 error: Operator 'or' with incompatible types.
+Line 22:15 error: Operator '>' with incompatible types.
+Line 27:6 error: `any-cast' requires an expression of type `any`.
+Line 27:37 error: Operator '+' with incompatible types.
+Line 29:6 error: `any-cast' requires an expression of type `any`.
+Line 29:21 error: The number of parameters in the call to 'g' does not match.
+Line 29:32 error: `any-cast' requires an expression of type `any`.
+Line 31:47 error: Operator 'not' with incompatible types.
+Line 33:7 error: Assignment with incompatible types.
+Line 33:9 error: `any-cast' requires an expression of type `any`.
+Line 33:39 error: Operator 'and' with incompatible types.
