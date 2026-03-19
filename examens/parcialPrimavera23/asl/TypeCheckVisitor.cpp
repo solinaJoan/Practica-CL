@@ -1,0 +1,696 @@
+//////////////////////////////////////////////////////////////////////
+//
+//    TypeCheckVisitor - Walk the parser tree to do the semantic
+//                       typecheck for the Asl programming language
+//
+//    Copyright (C) 2020-2030  Universitat Politecnica de Catalunya
+//
+//    This library is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU General Public License
+//    as published by the Free Software Foundation; either version 3
+//    of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Affero General Public License for more details.
+//
+//    You should have received a copy of the GNU Affero General Public
+//    License along with this library; if not, write to the Free Software
+//    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+//
+//    contact: José Miguel Rivero (rivero@cs.upc.edu)
+//             Computer Science Department
+//             Universitat Politecnica de Catalunya
+//             despatx Omega.110 - Campus Nord UPC
+//             08034 Barcelona.  SPAIN
+//
+//////////////////////////////////////////////////////////////////////
+
+#include "TypeCheckVisitor.h"
+#include "antlr4-runtime.h"
+
+#include "../common/TypesMgr.h"
+#include "../common/SymTable.h"
+#include "../common/TreeDecoration.h"
+#include "../common/SemErrors.h"
+
+#include <iostream>
+#include <string>
+
+// uncomment the following line to enable debugging messages with DEBUG*
+// #define DEBUG_BUILD
+#include "../common/debug.h"
+
+// using namespace std;
+
+// Constructor
+TypeCheckVisitor::TypeCheckVisitor(TypesMgr &Types,
+                                   SymTable &Symbols,
+                                   TreeDecoration &Decorations,
+                                   SemErrors &Errors) : Types{Types},
+                                                        Symbols{Symbols},
+                                                        Decorations{Decorations},
+                                                        Errors{Errors}
+{
+}
+
+// Accessor/Mutator to the attribute currFunctionType
+TypesMgr::TypeId TypeCheckVisitor::getCurrentFunctionTy() const
+{
+    return currFunctionType;
+}
+
+void TypeCheckVisitor::setCurrentFunctionTy(TypesMgr::TypeId type)
+{
+    currFunctionType = type;
+}
+
+// Methods to visit each kind of node:
+//
+std::any TypeCheckVisitor::visitProgram(AslParser::ProgramContext *ctx)
+{
+    DEBUG_ENTER();
+    SymTable::ScopeId sc = getScopeDecor(ctx);
+    Symbols.pushThisScope(sc);
+    for (auto ctxFunc : ctx->function())
+    {
+        visit(ctxFunc);
+    }
+    if (Symbols.noMainProperlyDeclared())
+        Errors.noMainProperlyDeclared(ctx);
+    Symbols.popScope();
+    Errors.print();
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitFunction(AslParser::FunctionContext *ctx)
+{
+    DEBUG_ENTER();
+    SymTable::ScopeId sc = getScopeDecor(ctx);
+    Symbols.pushThisScope(sc);
+    TypesMgr::TypeId t;
+    if (ctx->type())
+        t = getTypeDecor(ctx->type());
+    else
+        t = Types.createVoidTy();
+    setCurrentFunctionTy(t);
+    visit(ctx->statements());
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
+    Symbols.popScope();
+    DEBUG_EXIT();
+    return 0;
+}
+
+// std::any TypeCheckVisitor::visitDeclarations(AslParser::DeclarationsContext *ctx) {
+//   DEBUG_ENTER();
+//   std::any r = visitChildren(ctx);
+//   DEBUG_EXIT();
+//   return r;
+// }
+
+// std::any TypeCheckVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx) {
+//   DEBUG_ENTER();
+//   std::any r = visitChildren(ctx);
+//   DEBUG_EXIT();
+//   return r;
+// }
+
+// std::any TypeCheckVisitor::visitType(AslParser::TypeContext *ctx) {
+//   DEBUG_ENTER();
+//   std::any r = visitChildren(ctx);
+//   DEBUG_EXIT();
+//   return r;
+// }
+
+std::any TypeCheckVisitor::visitStatements(AslParser::StatementsContext *ctx)
+{
+    DEBUG_ENTER();
+    visitChildren(ctx);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->left_expr());
+    visit(ctx->expr());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->left_expr());
+    TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
+    if (not Types.isErrorTy(t2) and Types.isVoidTy(t2))
+        Errors.isNotFunction(ctx->expr());
+
+    else if ((not Types.isErrorTy(t1)) and (not Types.isErrorTy(t2)) and
+             (not Types.copyableTypes(t1, t2)))
+    {
+        Errors.incompatibleAssignment(ctx->ASSIGN());
+    }
+    if ((not Types.isErrorTy(t1)) and (not getIsLValueDecor(ctx->left_expr())))
+        Errors.nonReferenceableLeftExpr(ctx->left_expr());
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitIfStmt(AslParser::IfStmtContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->expr());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
+    if ((not Types.isErrorTy(t1)) and (not Types.isBooleanTy(t1)))
+        Errors.booleanRequired(ctx);
+    visit(ctx->statements(0));
+    if (ctx->statements().size() > 1)
+        visit(ctx->statements(1));
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitWhileStmt(AslParser::WhileStmtContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->expr());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
+    if ((not Types.isErrorTy(t1)) and (not Types.isBooleanTy(t1)))
+        Errors.booleanRequired(ctx);
+    visit(ctx->statements());
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitProcCall(AslParser::ProcCallContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->ident());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
+    if (not Types.isErrorTy(t1) and not Types.isFunctionTy(t1))
+    {
+        Errors.isNotCallable(ctx->ident());
+    }
+
+    // AFEGIR: Comprovació de paràmetres exacta a la de visitFunctionCall
+    if (ctx->lParams())
+    {
+        std::size_t nParamsFunction = Types.isFunctionTy(t1) ? Types.getNumOfParameters(t1) : 0;
+        std::size_t nParamsCall = ctx->lParams()->expr().size();
+        if (Types.isFunctionTy(t1) and nParamsFunction != nParamsCall)
+        {
+            Errors.numberOfParameters(ctx->ident());
+        }
+        for (std::size_t i = 0; i < nParamsCall; ++i)
+        {
+            visit(ctx->lParams()->expr(i));
+            if (i < nParamsFunction)
+            {
+                TypesMgr::TypeId tParamFunction = getTypeDecor(ctx->lParams()->expr(i));
+                TypesMgr::TypeId tParamCall = Types.getParameterType(t1, i);
+
+                if (not Types.isErrorTy(tParamFunction) and not Types.copyableTypes(tParamCall, tParamFunction))
+                {
+                    Errors.incompatibleParameter(ctx->lParams()->expr(i), i + 1, ctx->ident());
+                }
+            }
+        }
+    }
+    else
+    {
+        if (Types.isFunctionTy(t1) and Types.getNumOfParameters(t1) > 0)
+        {
+            Errors.numberOfParameters(ctx->ident());
+        }
+    }
+
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitReadStmt(AslParser::ReadStmtContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->left_expr());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->left_expr());
+    if ((not Types.isErrorTy(t1)) and (not Types.isPrimitiveTy(t1)) and
+        (not Types.isFunctionTy(t1)))
+        Errors.readWriteRequireBasic(ctx);
+    if ((not Types.isErrorTy(t1)) and (not getIsLValueDecor(ctx->left_expr())))
+        Errors.nonReferenceableExpression(ctx);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitWriteExpr(AslParser::WriteExprContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->expr());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
+    if ((not Types.isErrorTy(t1)) and (not Types.isPrimitiveTy(t1)))
+        Errors.readWriteRequireBasic(ctx);
+    DEBUG_EXIT();
+    return 0;
+}
+
+// std::any TypeCheckVisitor::visitWriteString(AslParser::WriteStringContext *ctx) {
+//   DEBUG_ENTER();
+//   std::any r = visitChildren(ctx);
+//   DEBUG_EXIT();
+//   return r;
+// }
+
+std::any TypeCheckVisitor::visitReturn(AslParser::ReturnContext *ctx)
+{
+    DEBUG_ENTER();
+    TypesMgr::TypeId t1 = getCurrentFunctionTy();
+    if (ctx->expr())
+    {
+        visit(ctx->expr());
+        TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
+        // Hem de comprovar que sigui del mateix tipus que la funció
+        if (not Types.isErrorTy(t1) and not Types.isErrorTy(t2) and not Types.copyableTypes(t1, t2))
+            Errors.incompatibleReturn(ctx->RETURN());
+    }
+    else
+    {
+        // Si no hi ha expressió i no es void, també donem error
+        if (not Types.isErrorTy(t1) and not Types.isVoidTy(t1))
+            Errors.incompatibleReturn(ctx->RETURN());
+    }
+    // Symbols.print();
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx)
+{
+    DEBUG_ENTER();
+    if (ctx->ident())
+    {
+        visit(ctx->ident());
+        TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
+        putTypeDecor(ctx, t1);
+        bool b = getIsLValueDecor(ctx->ident());
+        putIsLValueDecor(ctx, b);
+    }
+    else
+    {
+        visit(ctx->array());
+        TypesMgr::TypeId t1 = getTypeDecor(ctx->array());
+        putTypeDecor(ctx, t1);
+        bool b = getIsLValueDecor(ctx->array());
+        putIsLValueDecor(ctx, b);
+    }
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitParenthesis(AslParser::ParenthesisContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->expr());
+    TypesMgr::TypeId t = getTypeDecor(ctx->expr());
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->ident());
+    TypesMgr::TypeId t = getTypeDecor(ctx->ident());
+    // Si no es error i no es funció -> notCallable
+    if (not Types.isErrorTy(t) and not Types.isFunctionTy(t))
+        Errors.isNotCallable(ctx->ident());
+
+    if (ctx->lParams())
+    {
+        std::size_t nParamsFunction = Types.isFunctionTy(t) ? Types.getNumOfParameters(t) : 0;
+        std::size_t nParamsCall = ctx->lParams()->expr().size();
+
+        // Nomes traiem error de quantitat de parametres diferent si es funcio
+        if (Types.isFunctionTy(t) and nParamsFunction != nParamsCall)
+        {
+            Errors.numberOfParameters(ctx->ident());
+        }
+
+        // Visitem igualment les expressions de la llista de paràmetres
+        for (std::size_t i = 0; i < nParamsCall; ++i)
+        {
+            visit(ctx->lParams()->expr(i));
+            if (i < nParamsFunction)
+            {
+                TypesMgr::TypeId tParamFunction = getTypeDecor(ctx->lParams()->expr(i));
+                TypesMgr::TypeId tParamCall = Types.getParameterType(t, i);
+
+                if (not Types.isErrorTy(tParamFunction) and not Types.copyableTypes(tParamCall, tParamFunction))
+                {
+                    Errors.incompatibleParameter(ctx->lParams()->expr(i), i + 1, ctx->ident());
+                }
+            }
+        }
+    }
+    else
+    {
+        if (Types.isFunctionTy(t) and Types.getNumOfParameters(t) > 0)
+        {
+            Errors.numberOfParameters(ctx->ident());
+        }
+    }
+
+    if (Types.isFunctionTy(t))
+    {
+        TypesMgr::TypeId tRet = Types.getFuncReturnType(t);
+        putTypeDecor(ctx, tRet);
+        putIsLValueDecor(ctx, false);
+    }
+
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitUnary(AslParser::UnaryContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->expr());
+    TypesMgr::TypeId t = getTypeDecor(ctx->expr());
+    if ((not Types.isErrorTy(t)) and (not Types.isNumericTy(t)))
+        Errors.incompatibleOperator(ctx->op);
+    else
+    {
+        putTypeDecor(ctx, t);
+        putIsLValueDecor(ctx, false);
+    }
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx)
+{
+    DEBUG_ENTER();
+    // Visita la primera expressió
+    visit(ctx->expr(0));
+    // Agafa el seu tipus
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
+    // Visita la segona expressió
+    visit(ctx->expr(1));
+    // Agafa el seu tipus
+    TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
+
+    bool isMod = (ctx->op->getText() == "%");
+
+    if (isMod)
+    {
+        // El mòdul exigeix estrictament enters
+        if (((not Types.isErrorTy(t1)) and (not Types.isIntegerTy(t1))) or
+            ((not Types.isErrorTy(t2)) and (not Types.isIntegerTy(t2))))
+            Errors.incompatibleOperator(ctx->op);
+    }
+    else
+    {
+        // Multiplicació i divisió permeten qualsevol numèric
+        if (((not Types.isErrorTy(t1)) and (not Types.isNumericTy(t1))) or
+            ((not Types.isErrorTy(t2)) and (not Types.isNumericTy(t2))))
+            Errors.incompatibleOperator(ctx->op);
+    }
+
+    // Assignem el tipus resultant
+    TypesMgr::TypeId t;
+    if (isMod)
+    {
+        t = Types.createIntegerTy();
+    }
+    else
+    {
+        if (Types.isFloatTy(t1) or Types.isFloatTy(t2))
+            t = Types.createFloatTy();
+        else
+            t = Types.createIntegerTy();
+    }
+
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitRelational(AslParser::RelationalContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->expr(0));
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
+    visit(ctx->expr(1));
+    TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
+    std::string oper = ctx->op->getText();
+    // Si no son errors i no son comparables, afegeix un error
+    if ((not Types.isErrorTy(t1)) and (not Types.isErrorTy(t2)) and
+        (not Types.comparableTypes(t1, t2, oper)))
+        Errors.incompatibleOperator(ctx->op);
+    TypesMgr::TypeId t = Types.createBooleanTy();
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitNot(AslParser::NotContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->expr());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
+    if ((not Types.isErrorTy(t1)) and (not Types.isBooleanTy(t1)))
+        Errors.incompatibleOperator(ctx->op);
+    TypesMgr::TypeId t = Types.createBooleanTy();
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitLogic(AslParser::LogicContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->expr(0));
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
+    visit(ctx->expr(1));
+    TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
+    if (((not Types.isErrorTy(t1)) and (not Types.isBooleanTy(t1))) or
+        ((not Types.isErrorTy(t2)) and (not Types.isBooleanTy(t2))))
+        Errors.incompatibleOperator(ctx->op);
+
+    TypesMgr::TypeId t = Types.createBooleanTy();
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitIntVal(AslParser::IntValContext *ctx)
+{
+    DEBUG_ENTER();
+    TypesMgr::TypeId t = Types.createIntegerTy();
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitFloatVal(AslParser::FloatValContext *ctx)
+{
+    DEBUG_ENTER();
+    TypesMgr::TypeId t = Types.createFloatTy();
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitBoolVal(AslParser::BoolValContext *ctx)
+{
+    DEBUG_ENTER();
+    TypesMgr::TypeId t = Types.createBooleanTy();
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitCharVal(AslParser::CharValContext *ctx)
+{
+    DEBUG_ENTER();
+    TypesMgr::TypeId t = Types.createCharacterTy();
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitExprIdent(AslParser::ExprIdentContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->ident());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
+    putTypeDecor(ctx, t1);
+    bool b = getIsLValueDecor(ctx->ident());
+    putIsLValueDecor(ctx, b);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitArrayAccess(AslParser::ArrayAccessContext *ctx)
+{
+    DEBUG_ENTER();
+    // Visitem el fill array
+    visit(ctx->array());
+
+    // Propaguem el tipus i la propietat d'L-Value cap amunt
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->array());
+    putTypeDecor(ctx, t1);
+
+    bool b = getIsLValueDecor(ctx->array());
+    putIsLValueDecor(ctx, b);
+
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitArray(AslParser::ArrayContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->ident());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
+    if (not Types.isErrorTy(t1) and not Types.isArrayTy(t1))
+        Errors.nonArrayInArrayAccess(ctx->ident());
+
+    TypesMgr::TypeId tElemArray;
+    if (Types.isArrayTy(t1))
+        tElemArray = Types.getArrayElemType(t1);
+    else
+        tElemArray = Types.createErrorTy();
+    putTypeDecor(ctx, tElemArray);
+
+    putIsLValueDecor(ctx, true);
+
+    visit(ctx->expr());
+    TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
+    if (not Types.isErrorTy(t2) and not Types.isIntegerTy(t2))
+        Errors.nonIntegerIndexInArrayAccess(ctx->expr());
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx)
+{
+    DEBUG_ENTER();
+    std::string ident = ctx->getText();
+    // Si no esta declarada, posem un error
+    if (Symbols.findInStack(ident) == -1)
+    {
+        Errors.undeclaredIdent(ctx->ID());
+        TypesMgr::TypeId te = Types.createErrorTy();
+        putTypeDecor(ctx, te);
+        putIsLValueDecor(ctx, true);
+    }
+    else
+    {
+        TypesMgr::TypeId t1 = Symbols.getType(ident);
+        putTypeDecor(ctx, t1);
+        if (Symbols.isFunctionClass(ident))
+        {
+            putIsLValueDecor(ctx, false);
+        }
+        else
+            putIsLValueDecor(ctx, true);
+    }
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitCaseStmt(AslParser::CaseStmtContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->expr());
+    TypesMgr::TypeId t = getTypeDecor(ctx->expr());
+
+    if (not (Types.isIntegerTy(t) or Types.isCharacterTy(t))) {
+        Errors.incompatibleExpressionInCase(ctx);
+        putTypeDecor(ctx->expr(), Types.createErrorTy());
+    }
+
+    bool expr_error = Types.isErrorTy(getTypeDecor(ctx->expr()));
+    bool primer = true;
+
+    TypesMgr::TypeId tRef = t;
+
+    for (auto caseCtx : ctx->lCases()) {
+        visit(caseCtx);
+        TypesMgr::TypeId t1 = getTypeDecor(caseCtx);
+        // Si no és integer o caracter error
+        if (not (Types.isIntegerTy(t1) or Types.isCharacterTy(t1))) {
+            Errors.incompatibleValueInCase(caseCtx);
+        } 
+        // Si l'expressió no es error i no son el mateix tipus error
+        else if (not expr_error and not Types.equalTypes(tRef,t1)) {
+            Errors.incompatibleValueInCase(caseCtx);
+        }
+
+        // Si l'expresió és error i és el primer, l'agafem com a referència
+        if (expr_error and primer) {
+            tRef = t1;
+            primer = false;
+        }
+    }
+    
+    if (ctx->DEFAULT()) {
+        visit(ctx->statements());
+    }
+    
+
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitLCases(AslParser::LCasesContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->expr(0));
+    visit(ctx->statements());
+    // Propaguem el tipus i la propietat d'L-Value cap amunt
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
+    putTypeDecor(ctx, t1);
+
+    bool b = getIsLValueDecor(ctx->expr(0));
+    putIsLValueDecor(ctx, b);
+    DEBUG_EXIT();
+    return 0;
+}
+
+
+// Getters for the necessary tree node atributes:
+//   Scope, Type ans IsLValue
+SymTable::ScopeId TypeCheckVisitor::getScopeDecor(antlr4::ParserRuleContext *ctx)
+{
+    return Decorations.getScope(ctx);
+}
+TypesMgr::TypeId TypeCheckVisitor::getTypeDecor(antlr4::ParserRuleContext *ctx)
+{
+    return Decorations.getType(ctx);
+}
+bool TypeCheckVisitor::getIsLValueDecor(antlr4::ParserRuleContext *ctx)
+{
+    return Decorations.getIsLValue(ctx);
+}
+
+// Setters for the necessary tree node attributes:
+//   Scope, Type ans IsLValue
+void TypeCheckVisitor::putScopeDecor(antlr4::ParserRuleContext *ctx, SymTable::ScopeId s)
+{
+    Decorations.putScope(ctx, s);
+}
+void TypeCheckVisitor::putTypeDecor(antlr4::ParserRuleContext *ctx, TypesMgr::TypeId t)
+{
+    Decorations.putType(ctx, t);
+}
+void TypeCheckVisitor::putIsLValueDecor(antlr4::ParserRuleContext *ctx, bool b)
+{
+    Decorations.putIsLValue(ctx, b);
+}
