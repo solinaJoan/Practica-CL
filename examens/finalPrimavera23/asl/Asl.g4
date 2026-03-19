@@ -66,6 +66,7 @@ statement
         : left_expr ASSIGN expr ';'                                     # assignStmt
         | IF expr THEN statements (ELSE statements)? ENDIF              # ifStmt
         | WHILE expr DO statements ENDWHILE   # whileStmt
+        | FOREACH expr IN expr DO statements ENDFOR     # forStmt
           // A function/procedure call has a list of arguments in parenthesis (possibly empty)
         | ident '(' lParams? ')' ';'                   # procCall
           // Read a variable
@@ -85,6 +86,7 @@ left_expr
 
 // Grammar for expressions with boolean, relational and aritmetic operators
 expr    : '(' expr ')'                                   # parenthesis
+        | REDUCE '('expr ',' expr ')'                    # reduce
         | ident '(' lParams? ')'                         # functionCall
         | array                                          # arrayAccess
         | op=MINUS expr                                  # unary
@@ -120,6 +122,10 @@ lParams : (expr (',' expr)*)
 /// Lexer Rules
 //////////////////////////////////////////////////
 
+FOREACH   : 'foreach';
+IN        : 'in';
+ENDFOR    : 'endfor';
+REDUCE    : 'reduce';
 NOT       : 'not' ;
 AND       : 'and' ;
 OR        : 'or' ;       

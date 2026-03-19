@@ -607,17 +607,51 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx)
     return 0;
 }
 
-std::any TypeCheckVisitor::visitLParams(AslParser::LParamsContext *ctx)
-{
+std::any TypeCheckVisitor::visitForStmt(AslParser::ForStmtContext *ctx) {
     DEBUG_ENTER();
-    // S'ha de recuperar la funció que estem cridant i
-    // std::size_t n = Types.getNumOfParameters(t);
-    // for (std::size_t i = 0; i < n; ++i) {
-    //   TypesMgr::TypeId tParamFunction = Types.getParameterType(t,i);
-    //   TypesMgr::TypeId tParam = getTypeDecor(ctx->lparams()->expr(i));
-    //   if ()
-    // }
-    visitChildren(ctx);
+    visit(ctx->expr(0));
+    visit(ctx->expr(1));
+    TypesMgr::TypeId t0 = getTypeDecor(ctx->expr(0));
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(1));
+
+    if (not Types.isErrorTy(t0) and not Types.isErrorTy(t1)) {
+        // No son errors, comprovem que:
+        if (Types.isArrayTy(t1)) {
+            if (not Types.copyableTypes(t0, Types.getArrayElemType(t1)))
+                Errors.foreachIncompatibleArguments(ctx);
+        } else {
+            Errors.arrayIsRequired(ctx);
+        }
+    }
+    visit(ctx->statements());
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitReduce (AslParser::ReduceContext *ctx) {
+    DEBUG_ENTER();
+    //visitChildren(ctx);
+    visit(ctx->expr(0));
+    visit(ctx->expr(1));
+    TypesMgr::TypeId t0 = getTypeDecor(ctx->expr(0));
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(1));
+
+    TypesMgr::TypeId t;
+    if (not Types.isArrayTy(t0)) {
+        Errors.arrayIsRequired(ctx);
+        t = Types.createErrorTy();
+    } else if (not Types.isFunctionTy(t1) or not Types.reduceValidFunction(t1)) {
+        Errors.reduceInvalidFunction(ctx);
+        t = Types.createErrorTy();
+    } else if (not Types.copyableTypes(Types.getFuncReturnType(t1) ,Types.getArrayElemType(t0))) {
+        Errors.reduceIncompatibleArguments(ctx);
+        t = Types.createErrorTy();
+    } else {
+        t = Types.getFuncReturnType(t1);
+    }
+
+    putTypeDecor(ctx,t);
+    putIsLValueDecor(ctx, false);
     DEBUG_EXIT();
     return 0;
 }

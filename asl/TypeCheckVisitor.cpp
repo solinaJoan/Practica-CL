@@ -607,21 +607,6 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx)
     return 0;
 }
 
-std::any TypeCheckVisitor::visitLParams(AslParser::LParamsContext *ctx)
-{
-    DEBUG_ENTER();
-    // S'ha de recuperar la funció que estem cridant i
-    // std::size_t n = Types.getNumOfParameters(t);
-    // for (std::size_t i = 0; i < n; ++i) {
-    //   TypesMgr::TypeId tParamFunction = Types.getParameterType(t,i);
-    //   TypesMgr::TypeId tParam = getTypeDecor(ctx->lparams()->expr(i));
-    //   if ()
-    // }
-    visitChildren(ctx);
-    DEBUG_EXIT();
-    return 0;
-}
-
 // Getters for the necessary tree node atributes:
 //   Scope, Type ans IsLValue
 SymTable::ScopeId TypeCheckVisitor::getScopeDecor(antlr4::ParserRuleContext *ctx)

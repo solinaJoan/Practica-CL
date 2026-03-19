@@ -91,7 +91,9 @@ public:
   std::any visitArrayAccess(AslParser::ArrayAccessContext *ctx);
   std::any visitArray(AslParser::ArrayContext *ctx);
   std::any visitIdent(AslParser::IdentContext *ctx);
-  std::any visitLParams(AslParser::LParamsContext *ctx);
+
+  std::any visitForStmt(AslParser::ForStmtContext *ctx);
+  std::any visitReduce(AslParser::ReduceContext *ctx);
 
 private:
 

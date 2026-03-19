@@ -8,6 +8,7 @@
 *Parser.cpp
 *.interp
 *.tokens
+*.java
 AslBaseVisitor.cpp
 AslBaseVisitor.h
 AslVisitor.cpp
@@ -23,3 +24,6 @@ examens/*/asl/asl
 
 # Generated subdirectory (if used)
 gen/
+
+# IDE configurations
+.vscode
