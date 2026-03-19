@@ -14,7 +14,8 @@ _antlr
 _deps
 
 # Program binary
-asl
+asl/asl
+examens/*/asl/asl
 
 # Generated subdirectory (if used)
 gen/
