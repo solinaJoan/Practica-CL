@@ -8,6 +8,10 @@
 *Parser.cpp
 *.interp
 *.tokens
+AslBaseVisitor.cpp
+AslBaseVisitor.h
+AslVisitor.cpp
+AslVisitor.h
 
 # Dependency files
 _antlr
