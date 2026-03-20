@@ -618,27 +618,41 @@ std::any TypeCheckVisitor::visitCaseStmt(AslParser::CaseStmtContext *ctx) {
     }
 
     bool expr_error = Types.isErrorTy(getTypeDecor(ctx->expr()));
+    // std::string a = expr_error ? "true" : "false";
+    // std::cout << a << std::endl;
     bool primer = true;
 
     TypesMgr::TypeId tRef = t;
 
+    std::set<std::string> casos;
     for (auto caseCtx : ctx->lCases()) {
-        visit(caseCtx);
-        TypesMgr::TypeId t1 = getTypeDecor(caseCtx);
-        // Si no és integer o caracter error
-        if (not (Types.isIntegerTy(t1) or Types.isCharacterTy(t1))) {
-            Errors.incompatibleValueInCase(caseCtx);
-        } 
-        // Si l'expressió no es error i no son el mateix tipus error
-        else if (not expr_error and not Types.equalTypes(tRef,t1)) {
-            Errors.incompatibleValueInCase(caseCtx);
-        }
+        for (auto caseCtxExpr : caseCtx->expr()) {
+            // std::cout << caseCtxExpr->getText() << std::endl;
+            visit(caseCtxExpr);
+            TypesMgr::TypeId t1 = getTypeDecor(caseCtxExpr);
+            // Si no és integer o caracter, error
+            if (not (Types.isIntegerTy(t1) or Types.isCharacterTy(t1))) {
+                Errors.incompatibleValueInCase(caseCtxExpr);
+            } 
+            // Si l'expressió no es error i no son el mateix tipus error
+            else if (not expr_error and not Types.equalTypes(tRef,t1)) {
+                Errors.incompatibleValueInCase(caseCtxExpr);
+            }
 
-        // Si l'expresió és error i és el primer, l'agafem com a referència
-        if (expr_error and primer) {
-            tRef = t1;
-            primer = false;
+            // Si l'expresió és error i és el primer, l'agafem com a referència
+            if (expr_error and primer) {
+                tRef = t1;
+                primer = false;
+                expr_error = false;
+            }
+            // Si no hi és l'afegim, si hi és cridem error
+            if (casos.find(caseCtxExpr->getText()) == casos.end()) {
+                casos.insert(caseCtxExpr->getText());
+            } else {
+                Errors.repeatedValueInCase(caseCtxExpr);
+            }
         }
+        visit(caseCtx->statements());
     }
     
     if (ctx->DEFAULT()) {
@@ -646,20 +660,6 @@ std::any TypeCheckVisitor::visitCaseStmt(AslParser::CaseStmtContext *ctx) {
     }
     
 
-    DEBUG_EXIT();
-    return 0;
-}
-
-std::any TypeCheckVisitor::visitLCases(AslParser::LCasesContext *ctx) {
-    DEBUG_ENTER();
-    visit(ctx->expr(0));
-    visit(ctx->statements());
-    // Propaguem el tipus i la propietat d'L-Value cap amunt
-    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
-    putTypeDecor(ctx, t1);
-
-    bool b = getIsLValueDecor(ctx->expr(0));
-    putIsLValueDecor(ctx, b);
     DEBUG_EXIT();
     return 0;
 }

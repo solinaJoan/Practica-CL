@@ -164,9 +164,11 @@ OF        : 'of' ;
 BOOLVAL   : ('true'|'false') ;
 INTVAL    : ('0'..'9')+ ;
 FLOATVAL  : ('0'..'9')+ '.' ('0'..'9')+ ;
-CHARVAL   : '\''('a'..'z'|'A'..'Z'|'0'..'9'|' '|'\''|'\t'|'\n'|'@')'\'';
+CHARVAL   : '\'' ( ESC_SEQ | SAFE_CHAR ) '\'';
 ID        : ('a'..'z'|'A'..'Z') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')* ;
 
+fragment 
+SAFE_CHAR  : ~['\\\r\n] ;
 
 // Strings (in quotes) with escape sequences
 STRING    : '"' ( ESC_SEQ | ~('\\'|'"') )* '"' ;

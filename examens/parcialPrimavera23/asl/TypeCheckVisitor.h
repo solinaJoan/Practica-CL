@@ -93,7 +93,6 @@ public:
   std::any visitIdent(AslParser::IdentContext *ctx);
 
   std::any visitCaseStmt(AslParser::CaseStmtContext *ctx);
-  std::any visitLCases(AslParser::LCasesContext *ctx);
 
 private:
 
