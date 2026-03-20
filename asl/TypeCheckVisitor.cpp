@@ -140,16 +140,19 @@ std::any TypeCheckVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx)
     visit(ctx->expr());
     TypesMgr::TypeId t1 = getTypeDecor(ctx->left_expr());
     TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
-    if (not Types.isErrorTy(t2) and Types.isVoidTy(t2))
-        Errors.isNotFunction(ctx->expr());
 
-    else if ((not Types.isErrorTy(t1)) and (not Types.isErrorTy(t2)) and
-             (not Types.copyableTypes(t1, t2)))
-    {
+    if (Types.isVoidTy(t2)) {
+        Errors.isNotFunction(ctx->expr());
+    } 
+    // Si no son compatibles i no son errors (tractant els arrays correctament), error
+    else if (not Types.isErrorTy(t1) and not Types.isErrorTy(t2) and
+             not Types.copyableTypes(t1, t2)) { 
         Errors.incompatibleAssignment(ctx->ASSIGN());
     }
-    if ((not Types.isErrorTy(t1)) and (not getIsLValueDecor(ctx->left_expr())))
-        Errors.nonReferenceableLeftExpr(ctx->left_expr());
+
+    if ((not Types.isErrorTy(t1)) and (not getIsLValueDecor(ctx->left_expr()))) {
+            Errors.nonReferenceableLeftExpr(ctx->left_expr());
+    }
     DEBUG_EXIT();
     return 0;
 }

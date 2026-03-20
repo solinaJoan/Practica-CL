@@ -140,16 +140,19 @@ std::any TypeCheckVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx)
     visit(ctx->expr());
     TypesMgr::TypeId t1 = getTypeDecor(ctx->left_expr());
     TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
-    if (not Types.isErrorTy(t2) and Types.isVoidTy(t2))
-        Errors.isNotFunction(ctx->expr());
 
-    else if ((not Types.isErrorTy(t1)) and (not Types.isErrorTy(t2)) and
-             (not Types.copyableTypes(t1, t2)))
-    {
+    if (Types.isVoidTy(t2)) {
+        Errors.isNotFunction(ctx->expr());
+    } 
+    // Si no son compatibles i no son errors (tractant els arrays correctament), error
+    else if (not Types.isErrorTy(t1) and not Types.isErrorTy(t2) and
+             not Types.copyableTypes(t1, t2)) { 
         Errors.incompatibleAssignment(ctx->ASSIGN());
     }
-    if ((not Types.isErrorTy(t1)) and (not getIsLValueDecor(ctx->left_expr())))
-        Errors.nonReferenceableLeftExpr(ctx->left_expr());
+
+    if ((not Types.isErrorTy(t1)) and (not getIsLValueDecor(ctx->left_expr()))) {
+            Errors.nonReferenceableLeftExpr(ctx->left_expr());
+    }
     DEBUG_EXIT();
     return 0;
 }
@@ -547,9 +550,7 @@ std::any TypeCheckVisitor::visitArrayAccess(AslParser::ArrayAccessContext *ctx)
     // Propaguem el tipus i la propietat d'L-Value cap amunt
     TypesMgr::TypeId t1 = getTypeDecor(ctx->array());
     putTypeDecor(ctx, t1);
-
-    bool b = getIsLValueDecor(ctx->array());
-    putIsLValueDecor(ctx, b);
+    putIsLValueDecor(ctx, false);
 
     DEBUG_EXIT();
     return 0;
@@ -564,12 +565,10 @@ std::any TypeCheckVisitor::visitArray(AslParser::ArrayContext *ctx)
         Errors.nonArrayInArrayAccess(ctx->ident());
 
     TypesMgr::TypeId tElemArray;
-    if (Types.isArrayTy(t1))
-        tElemArray = Types.getArrayElemType(t1);
-    else
-        tElemArray = Types.createErrorTy();
+    if (Types.isArrayTy(t1)) tElemArray = Types.getArrayElemType(t1);
+    else tElemArray = Types.createErrorTy();
+        
     putTypeDecor(ctx, tElemArray);
-
     putIsLValueDecor(ctx, true);
 
     visit(ctx->expr());
@@ -667,27 +666,39 @@ std::any TypeCheckVisitor::visitTryCatch(AslParser::TryCatchContext *ctx){
 
 std::any TypeCheckVisitor::visitArrayConstructorExpr(AslParser::ArrayConstructorExprContext *ctx) {
     DEBUG_ENTER();
-
     visit(ctx->arrayConstructor(0));
     TypesMgr::TypeId t = getTypeDecor(ctx->arrayConstructor(0));
-    int size = Types.getArraySize(t);
+    int size = Types.isArrayTy(t) ? Types.getArraySize(t) : 0;
+    TypesMgr::TypeId tElem = Types.isArrayTy(t) ? Types.getArrayElemType(t) : Types.createErrorTy();
 
+    bool error = false;
     if (ctx->arrayConstructor().size() > 1) {
-        for (std::size_t i = 1; i < ctx->arrayConstructor().size(); ++i) {
+        for (std::size_t i = 1; i < ctx->arrayConstructor().size() and not error; ++i) {
+            // Visitem cada arrayConstructor. Pot tornar array <size,type> o error
             visit(ctx->arrayConstructor(i));
             TypesMgr::TypeId t1 = getTypeDecor(ctx->arrayConstructor(i));
-            if (not Types.isErrorTy(t1) and not Types.copyableTypes(t, t1))
-                Errors.arrayInitRequireCompatibleTypes(ctx);
+
+            if (not Types.isErrorTy(t1) and not Types.isErrorTy(t) 
+                    and not Types.copyableTypes(Types.getArrayElemType(t), Types.getArrayElemType(t1))) {
+                
+                if (Types.allNumericType({Types.getArrayElemType(t),Types.getArrayElemType(t1)})) {
+                    tElem = Types.createFloatTy();
+                }
+                else {
+                    Errors.arrayInitRequireCompatibleTypes(ctx);
+                    error = true;
+                }
+            }
+            
             if (Types.isArrayTy(t1)) size += Types.getArraySize(t1);
         }
     }
 
-    TypesMgr::TypeId tElem;
-    if (Types.isArrayTy(t)) {
-        tElem = Types.getArrayElemType(t);
-    } 
+    TypesMgr::TypeId tRet;
+    tRet = Types.isArrayTy(t) ? Types.createArrayTy(size,tElem) : tElem;
+    if (error) tRet = Types.createErrorTy();
 
-    putTypeDecor(ctx, Types.createArrayTy(size, tElem));
+    putTypeDecor(ctx, tRet);
     putIsLValueDecor(ctx, false);
 
     DEBUG_EXIT();
@@ -703,25 +714,26 @@ std::any TypeCheckVisitor::visitArrayConstructor(AslParser::ArrayConstructorCont
         typesCases.push_back(t);
     }
 
-    TypesMgr::TypeId t;
     if (not Types.allPrimitiveType(typesCases)) {
         Errors.arrayInitRequireBasicTypes(ctx);
-        t = Types.createErrorTy();
     } else if (not Types.allSameType(typesCases) and not Types.allNumericType(typesCases)) {
         Errors.arrayInitRequireCompatibleTypes(ctx);
-        t = Types.createErrorTy();
     }
     else {
-        t = typesCases[0];
-    }
+        // Tots els elements de l'array son primi
+        int size = ctx->expr().size();
+        if (ctx->INTVAL()) {
+            size *= std::stoi(ctx->INTVAL()->getText());
+        }
 
-    int size = ctx->expr().size();
-    if (ctx->INTVAL()) {
-        size *= std::stoi(ctx->INTVAL()->getText());
-    }
+        TypesMgr::TypeId tRet;
+        if (Types.allNumericType(typesCases) and not Types.allSameType(typesCases)) {
+            tRet = Types.createFloatTy();
+        } else tRet = typesCases[0];
 
-    putTypeDecor(ctx, Types.createArrayTy(size,t));
-    putIsLValueDecor(ctx, false);
+        putTypeDecor(ctx, Types.createArrayTy(size,tRet));
+        putIsLValueDecor(ctx, false);
+    }
     DEBUG_EXIT();
     return 0;
 }
