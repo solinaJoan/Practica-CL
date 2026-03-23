@@ -54,6 +54,7 @@ type    : INT
         | BOOL
         | CHAR
         | ARRAY '[' INTVAL ']' OF type
+        | STRUCT '{' (ident ':' type (',' ident ':' type)*)? '}'
         ;
 
 statements
@@ -62,9 +63,10 @@ statements
 
 // The different types of instructions
 statement
+        :
           // Assignment
-        : left_expr ASSIGN expr ';'                                     # assignStmt
-        | left_expr ASSIGN '[' expr '?' expr FOR expr IN expr ']'       # assignArray
+        left_expr ASSIGN expr ';'                                     # assignStmt
+        | left_expr ASSIGN '[' cond=expr '?' expr1=expr ':' expr2=expr FOR control=expr IN arrayexpr=expr ']'';'       # assignArray
         | IF expr THEN statements (ELSE statements)? ENDIF              # ifStmt
         | WHILE expr DO statements ENDWHILE                             # whileStmt
         | ident '(' lParams? ')' ';'                                    # procCall
@@ -76,8 +78,9 @@ statement
 
 // Grammar for left expressions (l-values in C++)
 left_expr 
-        : array                                 
-        | ident                                     
+        : array                                          # arrayLeftExpr                              
+        | ident '.' ident                                # structLeftExpr
+        | ident                                          # identLeftExpr  
         ;
 
 // Grammar for expressions with boolean, relational and aritmetic operators
@@ -117,6 +120,7 @@ lParams : (expr (',' expr)*)
 /// Lexer Rules
 //////////////////////////////////////////////////
 
+STRUCT    : 'struct';
 FOR       : 'for';
 IN        : 'in';
 NOT       : 'not' ;

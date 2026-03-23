@@ -284,22 +284,45 @@ std::any TypeCheckVisitor::visitReturn(AslParser::ReturnContext *ctx)
     return 0;
 }
 
-std::any TypeCheckVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx)
-{
-    DEBUG_ENTER();
-    auto *child = dynamic_cast<antlr4::ParserRuleContext*>(ctx->children[0]);
+// std::any TypeCheckVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx)
+// {
+//     DEBUG_ENTER();
+//     auto *child = dynamic_cast<antlr4::ParserRuleContext*>(ctx->children[0]);
     
-    if (child) {
-        visit(child);
+//     if (child) {
+//         visit(child);
         
-        // Propaguem les decoracions del fill cap al node actual (left_expr)
-        putTypeDecor(ctx, getTypeDecor(child));
-        putIsLValueDecor(ctx, getIsLValueDecor(child));
-    }
+//         // Propaguem les decoracions del fill cap al node actual (left_expr)
+//         putTypeDecor(ctx, getTypeDecor(child));
+//         putIsLValueDecor(ctx, getIsLValueDecor(child));
+//     }
 
+//     DEBUG_EXIT();
+//     return 0;
+// }
+
+std::any TypeCheckVisitor::visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->array());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->array());
+    putTypeDecor(ctx, t1);
+    bool b = getIsLValueDecor(ctx->array());
+    putIsLValueDecor(ctx, b);
     DEBUG_EXIT();
     return 0;
 }
+
+std::any TypeCheckVisitor::visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->ident());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
+    putTypeDecor(ctx, t1);
+    bool b = getIsLValueDecor(ctx->ident());
+    putIsLValueDecor(ctx, b);
+    DEBUG_EXIT();
+    return 0;
+}
+
 
 std::any TypeCheckVisitor::visitParenthesis(AslParser::ParenthesisContext *ctx)
 {
@@ -603,6 +626,49 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx)
     DEBUG_EXIT();
     return 0;
 }
+
+std::any TypeCheckVisitor::visitAssignArray(AslParser::AssignArrayContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->left_expr());
+    TypesMgr::TypeId tLeft = getTypeDecor(ctx->left_expr());
+    visit(ctx->cond);
+    TypesMgr::TypeId tCond = getTypeDecor(ctx->cond);
+    visit(ctx->expr1);
+    TypesMgr::TypeId tExpr1 = getTypeDecor(ctx->expr1);
+    visit(ctx->expr2);
+    TypesMgr::TypeId tExpr2 = getTypeDecor(ctx->expr2);
+    visit(ctx->control);
+    TypesMgr::TypeId tControl = getTypeDecor(ctx->control);
+    visit(ctx->arrayexpr);
+    TypesMgr::TypeId tArray = getTypeDecor(ctx->arrayexpr);
+    TypesMgr::TypeId tArrayLeft = Types.getArrayElemType(tLeft);
+    TypesMgr::TypeId tArrayRight = Types.getArrayElemType(tArray);
+
+    if (not (Types.isArrayTy(tLeft) and Types.isArrayTy(tArray) and Types.getArraySize(tLeft) == Types.getArraySize(tArray))) {
+        Errors.mapWithNonArraysOrDifferentSizes(ctx);
+    }
+    if (not Types.isErrorTy(tControl) and not Types.copyableTypes(tControl, tArrayRight)) {
+        Errors.mapWithIncompatibleControlVar(ctx);
+    }
+    if (not Types.isErrorTy(tCond) and not Types.isBooleanTy(tCond)) {
+        Errors.mapWithNonBooleanCondition(ctx);
+    }
+    if ((not Types.isErrorTy(tExpr1) and not Types.copyableTypes(tArrayLeft,tExpr1)) or (not Types.isErrorTy(tExpr2) and not Types.copyableTypes(tArrayLeft, tExpr2))) {
+        Errors.mapWithIncompatibleValues(ctx);
+    }
+
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitStructLeftExpr(AslParser::StructLeftExprContext *ctx) {
+    DEBUG_ENTER();
+    visitChildren(ctx);
+    DEBUG_EXIT();
+    return 0;
+}   
+
+
 
 // Getters for the necessary tree node atributes:
 //   Scope, Type ans IsLValue
