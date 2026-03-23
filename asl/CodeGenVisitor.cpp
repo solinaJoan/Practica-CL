@@ -207,9 +207,23 @@ std::any CodeGenVisitor::visitWriteString(AslParser::WriteStringContext *ctx) {
   return code;
 }
 
-std::any CodeGenVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx) {
+// std::any CodeGenVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx) {
+//   DEBUG_ENTER();
+//   CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->ident()));
+//   DEBUG_EXIT();
+//   return codAts;
+// }
+
+std::any CodeGenVisitor::visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx) {
   DEBUG_ENTER();
-  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->ident()));
+  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->children[0]));
+  DEBUG_EXIT();
+  return codAts;
+}
+
+std::any CodeGenVisitor::visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx) {
+  DEBUG_ENTER();
+  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->children[0]));
   DEBUG_EXIT();
   return codAts;
 }

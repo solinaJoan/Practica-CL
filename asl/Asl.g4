@@ -79,8 +79,8 @@ statement
 
 // Grammar for left expressions (l-values in C++)
 left_expr 
-        : array
-        | ident
+        : array                                          # arrayLeftExpr                              
+        | ident                                          # identLeftExpr  
         ;
 
 // Grammar for expressions with boolean, relational and aritmetic operators

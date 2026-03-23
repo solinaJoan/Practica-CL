@@ -284,25 +284,24 @@ std::any TypeCheckVisitor::visitReturn(AslParser::ReturnContext *ctx)
     return 0;
 }
 
-std::any TypeCheckVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx)
-{
+std::any TypeCheckVisitor::visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx) {
     DEBUG_ENTER();
-    if (ctx->ident())
-    {
-        visit(ctx->ident());
-        TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
-        putTypeDecor(ctx, t1);
-        bool b = getIsLValueDecor(ctx->ident());
-        putIsLValueDecor(ctx, b);
-    }
-    else
-    {
-        visit(ctx->array());
-        TypesMgr::TypeId t1 = getTypeDecor(ctx->array());
-        putTypeDecor(ctx, t1);
-        bool b = getIsLValueDecor(ctx->array());
-        putIsLValueDecor(ctx, b);
-    }
+    visit(ctx->array());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->array());
+    putTypeDecor(ctx, t1);
+    bool b = getIsLValueDecor(ctx->array());
+    putIsLValueDecor(ctx, b);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->ident());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
+    putTypeDecor(ctx, t1);
+    bool b = getIsLValueDecor(ctx->ident());
+    putIsLValueDecor(ctx, b);
     DEBUG_EXIT();
     return 0;
 }
