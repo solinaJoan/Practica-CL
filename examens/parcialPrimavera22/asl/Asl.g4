@@ -79,13 +79,14 @@ statement
 // Grammar for left expressions (l-values in C++)
 left_expr 
         : array                                          # arrayLeftExpr                              
-        | ident '.' ident                                # structLeftExpr
+        | structAccess                                   # structLeftExpr
         | ident                                          # identLeftExpr  
         ;
 
 // Grammar for expressions with boolean, relational and aritmetic operators
 expr    : '(' expr ')'                                   # parenthesis
         | ident '(' lParams? ')'                         # functionCall
+        | structAccess                                   # structAccessExpr
         | array                                          # arrayAccess
         | op=MINUS expr                                  # unary
         | expr op=(MUL|DIV|MOD) expr                     # arithmetic
@@ -103,6 +104,12 @@ expr    : '(' expr ')'                                   # parenthesis
 
 // Array
 array   : ident '[' expr ']'
+        ;
+
+// Struct access
+structAccess 
+        :
+        ident '.' ID
         ;
 
 // Identifiers

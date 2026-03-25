@@ -150,6 +150,7 @@ std::any SymbolsVisitor::visitType(AslParser::TypeContext *ctx) {
     std::vector<TypesMgr::TypeId> fieldTypes;
     for (std::size_t i = 0; i < ctx->type().size(); ++i) {
         visit(ctx->type(i));
+        visit(ctx->ident(i));
         fieldTypes.push_back(getTypeDecor(ctx->type(i)));
         fieldNames.push_back(ctx->ident(i)->getText());
     }
