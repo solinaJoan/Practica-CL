@@ -663,11 +663,46 @@ std::any TypeCheckVisitor::visitAssignArray(AslParser::AssignArrayContext *ctx) 
 
 std::any TypeCheckVisitor::visitStructLeftExpr(AslParser::StructLeftExprContext *ctx) {
     DEBUG_ENTER();
-    visitChildren(ctx);
+    // Visitem el fill 
+    visit(ctx->structAccess());
+    // Propaguem el tipus i la propietat d'L-Value cap amunt
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->structAccess());
+    putTypeDecor(ctx, t1);
+    putIsLValueDecor(ctx, true);
     DEBUG_EXIT();
     return 0;
-}   
+}
 
+std::any TypeCheckVisitor::visitStructAccessExpr(AslParser::StructAccessExprContext *ctx) {
+    DEBUG_ENTER();
+    // Visitem el fill 
+    visit(ctx->structAccess());
+    // Propaguem el tipus i la propietat d'L-Value cap amunt
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->structAccess());
+    putTypeDecor(ctx, t1);
+    putIsLValueDecor(ctx, false);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitStructAccess(AslParser::StructAccessContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->ident());
+    TypesMgr::TypeId t = getTypeDecor(ctx->ident());
+    if (not Types.isErrorTy(t)) {
+        if (not Types.isStructTy(t)) {
+            Errors.structAccessWithNonStruct(ctx);
+        } else if (not Types.existStructField(t, ctx->ID()->getText())) {
+            Errors.structAccessWithNonExistentField(ctx);
+        } else {
+            putTypeDecor(ctx, Types.getStructFieldTy(t, ctx->ID()->getText()));
+            putIsLValueDecor(ctx, true);
+        }
+    }
+
+    DEBUG_EXIT();
+    return 0;
+}
 
 
 // Getters for the necessary tree node atributes:

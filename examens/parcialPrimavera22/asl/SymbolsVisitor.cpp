@@ -146,15 +146,17 @@ std::any SymbolsVisitor::visitType(AslParser::TypeContext *ctx) {
     int size = std::stoi(ctx->INTVAL()->getText());
     t = Types.createArrayTy(size, tElem);
   } else if (ctx->STRUCT()) {
-    std::vector<std::string> fieldNames;
-    std::vector<TypesMgr::TypeId> fieldTypes;
+    t = Types.createEmptyStructTy();
     for (std::size_t i = 0; i < ctx->type().size(); ++i) {
-        visit(ctx->type(i));
-        visit(ctx->ident(i));
-        fieldTypes.push_back(getTypeDecor(ctx->type(i)));
-        fieldNames.push_back(ctx->ident(i)->getText());
+      visit(ctx->type(i));
+      visit(ctx->ident(i));
+      std::string name = ctx->ident(i)->getText(); 
+      if (not Types.existStructField(t,name)) {
+        Types.addStructField(t,name, getTypeDecor(ctx->type(i)));
+      } else {
+        Errors.structRedeclaresFieldName(ctx);
+      }
     }
-    ctx->type().size() == 0 ? t = Types.createEmptyStructTy() : t = Types.createStructTy(fieldNames, fieldTypes); 
   }
   putTypeDecor(ctx, t);
   DEBUG_EXIT();

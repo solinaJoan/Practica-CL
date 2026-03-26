@@ -1,0 +1,5 @@
+PP25: Falten dos ultims (slice arrays multidimensionals), 
+PP24: tot fet
+PP23: 4 primers (punters)
+FP23: tot fet, foreach i reduce
+PP22: tot fet, mapeig d'arrays a = [cond ? expr1 : expr2 for x in b] i structs

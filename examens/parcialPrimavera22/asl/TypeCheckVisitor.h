@@ -96,6 +96,9 @@ public:
 
   std::any visitAssignArray(AslParser::AssignArrayContext *ctx);
   std::any visitStructLeftExpr(AslParser::StructLeftExprContext *ctx);
+  std::any visitStructAccessExpr(AslParser::StructAccessExprContext *ctx);
+  std::any visitStructAccess(AslParser::StructAccessContext *ctx);
+
   
 private:
 

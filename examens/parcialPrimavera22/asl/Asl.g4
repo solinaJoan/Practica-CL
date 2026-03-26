@@ -65,7 +65,7 @@ statements
 statement
         :
           // Assignment
-        left_expr ASSIGN expr ';'                                     # assignStmt
+        left_expr ASSIGN expr ';'                                      # assignStmt
         | left_expr ASSIGN '[' cond=expr '?' expr1=expr ':' expr2=expr FOR control=expr IN arrayexpr=expr ']'';'       # assignArray
         | IF expr THEN statements (ELSE statements)? ENDIF              # ifStmt
         | WHILE expr DO statements ENDWHILE                             # whileStmt
@@ -89,10 +89,10 @@ expr    : '(' expr ')'                                   # parenthesis
         | structAccess                                   # structAccessExpr
         | array                                          # arrayAccess
         | op=MINUS expr                                  # unary
+        | op=NOT expr                                    # not
         | expr op=(MUL|DIV|MOD) expr                     # arithmetic
         | expr op=(PLUS|MINUS) expr                      # arithmetic
         | expr op=(EQ|NE|LT|LE|GT|GE) expr               # relational
-        | op=NOT expr                                    # not
         | expr op=AND expr                               # logic
         | expr op=OR expr                                # logic
         | INTVAL                                         # intVal
