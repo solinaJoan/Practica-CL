@@ -133,19 +133,29 @@ std::any SymbolsVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx
   return 0;
 }
 
-std::any SymbolsVisitor::visitType(AslParser::TypeContext *ctx) {
+std::any SymbolsVisitor::visitBasic_type(AslParser::Basic_typeContext *ctx) {
   DEBUG_ENTER();
   TypesMgr::TypeId t;
   if (ctx->INT()) t = Types.createIntegerTy();
   else if (ctx->FLOAT()) t = Types.createFloatTy();
   else if (ctx->BOOL()) t = Types.createBooleanTy();
   else if (ctx->CHAR()) t = Types.createCharacterTy();
-  else if (ctx->ARRAY()) {
-    visit(ctx->type());
-    TypesMgr::TypeId tElem = getTypeDecor(ctx->type());
+  putTypeDecor(ctx, t);
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any SymbolsVisitor::visitType(AslParser::TypeContext *ctx) {
+  DEBUG_ENTER();
+  TypesMgr::TypeId t;
+  visit(ctx->basic_type());
+  t = getTypeDecor(ctx->basic_type());
+   
+  if (ctx->ARRAY()) {
     int size = std::stoi(ctx->INTVAL()->getText());
-    t = Types.createArrayTy(size, tElem);
+    t = Types.createArrayTy(size, t);
   }
+  
   putTypeDecor(ctx, t);
   DEBUG_EXIT();
   return 0;

@@ -49,13 +49,17 @@ variable_decl
         : VAR ID (',' ID)* ':' type
         ;
 
-type    : INT
+basic_type
+        : INT
         | FLOAT
         | BOOL
         | CHAR
-        | ARRAY '[' INTVAL ']' OF type
         ;
 
+type    : basic_type
+        | ARRAY '[' INTVAL ']' OF basic_type
+        ;
+        
 statements
         : (statement)*
         ;
@@ -65,16 +69,12 @@ statement
           // Assignment
         : left_expr ASSIGN expr ';'                                     # assignStmt
         | IF expr THEN statements (ELSE statements)? ENDIF              # ifStmt
-        | WHILE expr DO statements ENDWHILE   # whileStmt
-          // A function/procedure call has a list of arguments in parenthesis (possibly empty)
-        | ident '(' lParams? ')' ';'                   # procCall
-          // Read a variable
-        | READ left_expr ';'                  # readStmt
-          // Write an expression
-        | WRITE expr ';'                      # writeExpr
-          // Write a string
-        | WRITE STRING ';'                    # writeString
-        | RETURN expr? ';'                          # return
+        | WHILE expr DO statements ENDWHILE                             # whileStmt
+        | ident '(' lParams? ')' ';'                                    # procCall
+        | READ left_expr ';'                                            # readStmt
+        | WRITE expr ';'                                                # writeExpr
+        | WRITE STRING ';'                                              # writeString
+        | RETURN expr? ';'                                              # return
         ;
 
 // Grammar for left expressions (l-values in C++)
