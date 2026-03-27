@@ -133,7 +133,7 @@ std::any SymbolsVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx
   return 0;
 }
 
-std::any SymbolsVisitor::visitBasic_type(AslParser::Basic_typeContext *ctx) {
+std::any SymbolsVisitor::visitBasicType(AslParser::BasicTypeContext *ctx) {
   DEBUG_ENTER();
   TypesMgr::TypeId t;
   if (ctx->INT()) t = Types.createIntegerTy();
@@ -145,10 +145,10 @@ std::any SymbolsVisitor::visitBasic_type(AslParser::Basic_typeContext *ctx) {
   return 0;
 }
 
-std::any SymbolsVisitor::visitBasictype(AslParser::BasictypeContext *ctx) {
+std::any SymbolsVisitor::visitBasicTypeLabel(AslParser::BasicTypeLabelContext *ctx) {
   DEBUG_ENTER();
-  visit(ctx->basic_type());
-  TypesMgr::TypeId t = getTypeDecor(ctx->basic_type());
+  visit(ctx->basicType());
+  TypesMgr::TypeId t = getTypeDecor(ctx->basicType());
   putTypeDecor(ctx, t);
   DEBUG_EXIT();
   return 0;
@@ -156,14 +156,28 @@ std::any SymbolsVisitor::visitBasictype(AslParser::BasictypeContext *ctx) {
 
 std::any SymbolsVisitor::visitArrayType(AslParser::ArrayTypeContext *ctx) {
   DEBUG_ENTER();
-  visit(ctx->basic_type());
-  TypesMgr::TypeId t = getTypeDecor(ctx->basic_type());
+  visit(ctx->basicType());
+  TypesMgr::TypeId t = getTypeDecor(ctx->basicType());
   int size = std::stoi(ctx->INTVAL()->getText());
   TypesMgr::TypeId tRet = Types.createArrayTy(size, t);
   putTypeDecor(ctx, tRet);
   DEBUG_EXIT();
   return 0;
 }
+
+std::any SymbolsVisitor::visitTupleType(AslParser::TupleTypeContext *ctx){
+  DEBUG_ENTER();
+  std::vector<TypesMgr::TypeId> fields;
+  for (auto bT : ctx->basicType()) {
+    visit(bT);
+    TypesMgr::TypeId t = getTypeDecor(bT);
+    fields.push_back(t);
+  }
+  putTypeDecor(ctx, Types.createTupleTy(fields));
+  DEBUG_EXIT();
+  return 0;
+}
+
 
 // std::any SymbolsVisitor::visitType(AslParser::TypeContext *ctx) {
 //   DEBUG_ENTER();

@@ -49,16 +49,16 @@ variable_decl
         : VAR ID (',' ID)* ':' type
         ;
 
-basic_type
+basicType
         : INT
         | FLOAT
         | BOOL
         | CHAR
         ;
 
-type    : basic_type                            # basictype
-        | ARRAY '[' INTVAL ']' OF basic_type    # arrayType
-        | '{' basic_type (',' basic_type) '}'   # tupleType
+type    : basicType                             # basicTypeLabel
+        | ARRAY '[' INTVAL ']' OF basicType     # arrayType
+        | '{' basicType (',' basicType)* '}'    # tupleType
         ;
 
 statements

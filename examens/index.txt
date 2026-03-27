@@ -3,3 +3,4 @@ PP24: tot fet
 PP23: 4 primers (punters)
 FP23: tot fet, foreach i reduce
 PP22: tot fet, mapeig d'arrays a = [cond ? expr1 : expr2 for x in b] i structs
+PP21: tot fet, pack, unpack i tuples 'var q : {float , int}', a = q{0} + 8

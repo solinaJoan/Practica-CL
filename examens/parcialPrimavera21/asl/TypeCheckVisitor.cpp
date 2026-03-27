@@ -660,20 +660,44 @@ std::any TypeCheckVisitor::visitPackStmtPrivate(AslParser::PackStmtContext *ctx,
 
 std::any TypeCheckVisitor::visitTupleAccessExpr(AslParser::TupleAccessExprContext *ctx) {
     DEBUG_ENTER();
-    visitChildren(ctx);
+    visit(ctx->tupleAccess());
+    TypesMgr::TypeId t = getTypeDecor(ctx->tupleAccess());
+    putTypeDecor(ctx,t);
+    putIsLValueDecor(ctx,false);
     DEBUG_EXIT();
     return 0; 
 }
 
 std::any TypeCheckVisitor::visitTupleLeftExpr(AslParser::TupleLeftExprContext *ctx) {
     DEBUG_ENTER();
-    visitChildren(ctx);
+    visit(ctx->tupleAccess());
+    TypesMgr::TypeId t = getTypeDecor(ctx->tupleAccess());
+    putTypeDecor(ctx,t);
+    putIsLValueDecor(ctx,true);
     DEBUG_EXIT();
     return 0; 
 }
+
 std::any TypeCheckVisitor::visitTupleAccess(AslParser::TupleAccessContext *ctx) {
     DEBUG_ENTER();
-    visitChildren(ctx);
+    visit(ctx->ident());
+    TypesMgr::TypeId t = getTypeDecor(ctx->ident());
+
+    if (not Types.isErrorTy(t)) {
+        if (not Types.isTupleTy(t)) {
+            Errors.nonTupleInTupleAccess(ctx);
+        } else {
+            // Es una tupla
+            int size = Types.getTupleSize(t);
+            int idxAcces = std::stoi(ctx->INTVAL()->getText());
+            if (idxAcces >= size or idxAcces < 0) {
+                Errors.nonExistentFieldInTuple(ctx);
+            } 
+            else {
+                putTypeDecor(ctx, Types.getTupleFieldType(t,idxAcces));
+            }
+        }
+    }
     DEBUG_EXIT();
     return 0; 
 }
