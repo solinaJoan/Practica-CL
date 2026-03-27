@@ -532,6 +532,15 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx)
     return 0;
 }
 
+// std::any TypeCheckVisitor::visitXXX(AslParser::XXXContext *ctx){
+//     DEBUG_ENTER();
+//     visit(ctx->XXX());
+//     TypesMgr::TypeId t = getTypeDecor(ctx->XXX());
+//     putTypeDecor(ctx, t);
+//     DEBUG_EXIT();
+//     return 0;
+// }
+
 // Getters for the necessary tree node atributes:
 //   Scope, Type ans IsLValue
 SymTable::ScopeId TypeCheckVisitor::getScopeDecor(antlr4::ParserRuleContext *ctx)
