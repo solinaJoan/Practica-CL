@@ -66,11 +66,10 @@ public:
   // std::any visitDeclarations(AslParser::DeclarationsContext *ctx);
   // std::any visitVariable_decl(AslParser::Variable_declContext *ctx);
   // std::any visitType(AslParser::TypeContext *ctx);
-  std::any visitStatements(AslParser::StatementsContext *ctx);
+  // std::any visitStatements(AslParser::StatementsContext *ctx);
   std::any visitAssignStmt(AslParser::AssignStmtContext *ctx);
   std::any visitIfStmt(AslParser::IfStmtContext *ctx);
   std::any visitWhileStmt(AslParser::WhileStmtContext *ctx);
-  std::any visitProcCall(AslParser::ProcCallContext *ctx);
   std::any visitReadStmt(AslParser::ReadStmtContext *ctx);
   std::any visitWriteExpr(AslParser::WriteExprContext *ctx);
   std::any visitReturn(AslParser::ReturnContext *ctx);
@@ -79,6 +78,7 @@ public:
   std::any visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx);
   std::any visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx);
   std::any visitParenthesis(AslParser::ParenthesisContext *ctx);
+  std::any visitFunctionCallExpr(AslParser::FunctionCallExprContext *ctx);
   std::any visitFunctionCall(AslParser::FunctionCallContext *ctx);
   std::any visitUnary(AslParser::UnaryContext *ctx);
   std::any visitArithmetic(AslParser::ArithmeticContext *ctx);

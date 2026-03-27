@@ -49,15 +49,15 @@ variable_decl
         : VAR ID (',' ID)* ':' type
         ;
 
-basic_type
+basicType
         : INT
         | FLOAT
         | BOOL
         | CHAR
         ;
 
-type    : basic_type
-        | ARRAY '[' INTVAL ']' OF basic_type
+type    : basicType                             # basicTypeLabel
+        | ARRAY '[' INTVAL ']' OF basicType     # arrayType
         ;
         
 statements
@@ -70,7 +70,7 @@ statement
         : left_expr ASSIGN expr ';'                                     # assignStmt
         | IF expr THEN statements (ELSE statements)? ENDIF              # ifStmt
         | WHILE expr DO statements ENDWHILE                             # whileStmt
-        | ident '(' lParams? ')' ';'                                    # procCall
+        | functionCall ';'                                              # functionCallStmt
         | READ left_expr ';'                                            # readStmt
         | WRITE expr ';'                                                # writeExpr
         | WRITE STRING ';'                                              # writeString
@@ -85,7 +85,7 @@ left_expr
 
 // Grammar for expressions with boolean, relational and aritmetic operators
 expr    : '(' expr ')'                                   # parenthesis
-        | ident '(' lParams? ')'                         # functionCall
+        | functionCall                                   # functionCallExpr
         | array                                          # arrayAccess
         | op=MINUS expr                                  # unary
         | op=NOT expr                                    # not
@@ -113,7 +113,8 @@ ident   : ID
 params  : ID ':' type (',' ID ':' type)*             
         ;
 
-lParams : (expr (',' expr)*)
+functionCall 
+        : ident '(' (expr (',' expr)*)? ')'
         ;
 
 //////////////////////////////////////////////////

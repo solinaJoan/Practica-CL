@@ -162,11 +162,11 @@ std::any CodeGenVisitor::visitIfStmt(AslParser::IfStmtContext *ctx) {
   return code;
 }
 
-std::any CodeGenVisitor::visitProcCall(AslParser::ProcCallContext *ctx) {
+std::any CodeGenVisitor::visitFunctionCallStmt(AslParser::FunctionCallStmtContext *ctx){
   DEBUG_ENTER();
   instructionList code;
   // std::string name = ctx->ident()->ID()->getSymbol()->getText();
-  std::string name = ctx->ident()->getText();
+  std::string name = ctx->functionCall()->ident()->getText();
   code = instruction::CALL(name);
   DEBUG_EXIT();
   return code;
