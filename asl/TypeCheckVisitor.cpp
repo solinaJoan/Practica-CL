@@ -534,8 +534,8 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx)
 
 // std::any TypeCheckVisitor::visitXXX(AslParser::XXXContext *ctx){
 //     DEBUG_ENTER();
-//     visit(ctx->XXX());
-//     TypesMgr::TypeId t = getTypeDecor(ctx->XXX());
+//     visit(ctx->YYY());
+//     TypesMgr::TypeId t = getTypeDecor(ctx->YYY());
 //     putTypeDecor(ctx, t);
 //     DEBUG_EXIT();
 //     return 0;
