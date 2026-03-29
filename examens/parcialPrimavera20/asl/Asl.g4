@@ -70,6 +70,7 @@ statement
         : left_expr ASSIGN expr ';'                                     # assignStmt
         | IF expr THEN statements (ELSE statements)? ENDIF              # ifStmt
         | WHILE expr DO statements ENDWHILE                             # whileStmt
+        | FOR expr IN expr DO statements ENDFOR                         # forStmt
         | functionCall ';'                                              # functionCallStmt
         | READ left_expr ';'                                            # readStmt
         | WRITE expr ';'                                                # writeExpr
@@ -85,7 +86,8 @@ left_expr
 
 // Grammar for expressions with boolean, relational and aritmetic operators
 expr    : '(' expr ')'                                   # parenthesis
-        | MAX '(' expr? (',' expr)* ')'                   # maxExpr
+        | MAX '(' expr? (',' expr)* ')'                  # maxExpr
+        | RANGE '(' expr? (',' expr)* ')'                # rangeExpr
         | functionCall                                   # functionCallExpr
         | array                                          # arrayAccess
         | op=MINUS expr                                  # unary
@@ -122,6 +124,10 @@ functionCall
 /// Lexer Rules
 //////////////////////////////////////////////////
 
+FOR       : 'for' ;
+IN        : 'in' ;
+ENDFOR    : 'endfor' ;
+RANGE     : 'range';
 MAX       : 'max';
 NOT       : 'not' ;
 AND       : 'and' ;

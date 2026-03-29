@@ -559,6 +559,47 @@ std::any TypeCheckVisitor::visitMaxExpr(AslParser::MaxExprContext *ctx){
     return 0;
 }
 
+std::any TypeCheckVisitor::visitForStmt(AslParser::ForStmtContext *ctx){
+    DEBUG_ENTER();
+    visit(ctx->expr(0));
+    visit(ctx->expr(1));
+    visit(ctx->statements());
+    TypesMgr::TypeId tStart = getTypeDecor(ctx->expr(0));
+    TypesMgr::TypeId tRange = getTypeDecor(ctx->expr(1));
+
+    if (not Types.isErrorTy(tStart) and not Types.isIntegerTy(tStart)) {
+        Errors.forRequireIntegerVar(ctx->expr(0));
+    }
+    if (Types.isErrorTy(Types.getArrayElemType(tRange))) {
+        Errors.numberOfRangeExpressions(ctx);
+        
+    }
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitRangeExpr(AslParser::RangeExprContext *ctx){
+    DEBUG_ENTER();
+    visitChildren(ctx);
+    for (auto ex : ctx->expr()) {
+        TypesMgr::TypeId t = getTypeDecor(ex);
+        if (not Types.isErrorTy(t) and not Types.isIntegerTy(t)) {
+            Errors.forRequireIntegerExpr(ex);
+        }
+    }
+
+    int nExpr = ctx->expr().size();
+    if (nExpr > 3 or nExpr < 1) {
+        putTypeDecor(ctx, Types.createArrayTy(0, Types.createErrorTy()));
+    } else {
+        putTypeDecor(ctx, Types.createArrayTy(nExpr, Types.createIntegerTy()));
+    }
+
+    DEBUG_EXIT();
+    return 0;
+}
+
+
 
 bool TypeCheckVisitor::allPrimitiveType(const std::vector<TypesMgr::TypeId> & types) const {
   for (unsigned int i = 0; i < types.size(); ++i) {

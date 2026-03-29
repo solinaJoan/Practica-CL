@@ -95,6 +95,8 @@ public:
   std::any visitIdent(AslParser::IdentContext *ctx);
 
   std::any visitMaxExpr(AslParser::MaxExprContext *ctx);
+  std::any visitForStmt(AslParser::ForStmtContext *ctx);
+  std::any visitRangeExpr(AslParser::RangeExprContext *ctx);
 
   
   private:
