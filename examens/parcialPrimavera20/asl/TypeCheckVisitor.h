@@ -96,9 +96,9 @@ public:
 
   std::any visitMaxExpr(AslParser::MaxExprContext *ctx);
 
-
-private:
-
+  
+  private:
+  
   // Attributes
   TypesMgr       & Types;
   SymTable       & Symbols;
@@ -106,17 +106,24 @@ private:
   SemErrors      & Errors;
   // Current function type (assigned before visit its instructions)
   TypesMgr::TypeId currFunctionType;
-
+  
   // Accessor/Mutator to the type (TypeId) of the current function
   TypesMgr::TypeId getCurrentFunctionTy ()                      const;
   void             setCurrentFunctionTy (TypesMgr::TypeId type);
-
+  
   // Getters for the necessary tree node atributes:
   //   Scope, Type ans IsLValue
   SymTable::ScopeId getScopeDecor    (antlr4::ParserRuleContext *ctx);
   TypesMgr::TypeId  getTypeDecor     (antlr4::ParserRuleContext *ctx);
   bool              getIsLValueDecor (antlr4::ParserRuleContext *ctx);
+  
+  // Auxiliary methods to check the properties of types
+  bool allPrimitiveType(const std::vector<TypesMgr::TypeId> & types) const;
+  bool allSameType     (const std::vector<TypesMgr::TypeId> & types) const;
+  bool allNumericType  (const std::vector<TypesMgr::TypeId> & types) const;
 
+  TypesMgr::TypeId getTypeCoercion (const std::vector<TypesMgr::TypeId> & types) const;
+  
   // Setters for the necessary tree node attributes:
   //   Scope, Type ans IsLValue
   void putScopeDecor    (antlr4::ParserRuleContext *ctx, SymTable::ScopeId s);
