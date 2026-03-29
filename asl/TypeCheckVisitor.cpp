@@ -534,12 +534,60 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx)
 
 // std::any TypeCheckVisitor::visitXXX(AslParser::XXXContext *ctx){
 //     DEBUG_ENTER();
+//     visitChildren(ctx);
 //     visit(ctx->YYY());
 //     TypesMgr::TypeId t = getTypeDecor(ctx->YYY());
 //     putTypeDecor(ctx, t);
 //     DEBUG_EXIT();
 //     return 0;
 // }
+
+
+bool TypeCheckVisitor::allPrimitiveType(const std::vector<TypesMgr::TypeId> & types) const {
+  for (unsigned int i = 0; i < types.size(); ++i) {
+    if (not Types.isErrorTy(types[i]) and not Types.isPrimitiveTy(types[i]))
+      return false;
+  }
+  return true;
+}
+
+bool TypeCheckVisitor::allSameType(const std::vector<TypesMgr::TypeId> & types) const {
+  int firstNonErrorPos = -1;
+  for (unsigned int i = 0; i < types.size(); ++i) {
+    if (not Types.isErrorTy(types[i])) {
+      firstNonErrorPos = i;
+      break;
+    }
+  }
+  if (firstNonErrorPos != -1) {
+    for (unsigned int i = firstNonErrorPos+1; i < types.size(); ++i) {
+      if (not Types.isErrorTy(types[i]) and not Types.equalTypes(types[firstNonErrorPos], types[i]))
+        return false;
+    }
+    return true;
+  }
+  return true;
+}
+
+bool TypeCheckVisitor::allNumericType(const std::vector<TypesMgr::TypeId> & types) const {
+  for (unsigned int i = 0; i < types.size(); ++i) {
+    if (not Types.isNumericTy(types[i]) and not Types.isErrorTy(types[i]))
+      return false;
+  }
+  return true;
+}
+
+TypesMgr::TypeId TypeCheckVisitor::getTypeCoercion (const std::vector<TypesMgr::TypeId> &types) const {
+    if (allPrimitiveType(types)) {
+        if (allSameType(types)) {
+            return types[0];
+        } else if (allNumericType(types)) {
+            return Types.createFloatTy();
+        }
+    }
+    // O perque no tots son primitius o perque no son ni tots numerics ni tots iguals
+    return Types.createErrorTy();
+}
 
 // Getters for the necessary tree node atributes:
 //   Scope, Type ans IsLValue

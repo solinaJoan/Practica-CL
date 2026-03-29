@@ -114,6 +114,12 @@ private:
   TypesMgr::TypeId  getTypeDecor     (antlr4::ParserRuleContext *ctx);
   bool              getIsLValueDecor (antlr4::ParserRuleContext *ctx);
 
+    // Auxiliary methods to check the properties of types
+  bool allPrimitiveType(const std::vector<TypesMgr::TypeId> & types) const;
+  bool allSameType     (const std::vector<TypesMgr::TypeId> & types) const;
+  bool allNumericType  (const std::vector<TypesMgr::TypeId> & types) const;
+  TypesMgr::TypeId getTypeCoercion (const std::vector<TypesMgr::TypeId> &types) const;
+
   // Setters for the necessary tree node attributes:
   //   Scope, Type ans IsLValue
   void putScopeDecor    (antlr4::ParserRuleContext *ctx, SymTable::ScopeId s);
