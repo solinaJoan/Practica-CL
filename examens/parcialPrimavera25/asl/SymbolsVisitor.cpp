@@ -134,32 +134,38 @@ std::any SymbolsVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx
   return 0;
 }
 
-std::any SymbolsVisitor::visitType(AslParser::TypeContext *ctx) {
+std::any SymbolsVisitor::visitBasicType(AslParser::BasicTypeContext *ctx) {
   DEBUG_ENTER();
   TypesMgr::TypeId t;
   if (ctx->INT()) t = Types.createIntegerTy();
   else if (ctx->FLOAT()) t = Types.createFloatTy();
   else if (ctx->BOOL()) t = Types.createBooleanTy();
   else if (ctx->CHAR()) t = Types.createCharacterTy();
-  else if (ctx->ARRAY()) {
-    visit(ctx->type());
-    TypesMgr::TypeId tElem = getTypeDecor(ctx->type());
-    int dimension = ctx->INTVAL().size();
-    
-    for (int i = dimension-1; i >= 0; --i) {
-      int size = std::stoi(ctx->INTVAL(i)->getText());
-      t = Types.createArrayTy(size, tElem);
-      tElem = t;
-    }
-
-  } else {
-    t = Types.createAnyTy();
-  }
+  else if (ctx->ANY()) t = Types.createAnyTy();
   putTypeDecor(ctx, t);
   DEBUG_EXIT();
   return 0;
 }
 
+std::any SymbolsVisitor::visitBasicTypeLabel(AslParser::BasicTypeLabelContext *ctx) {
+  DEBUG_ENTER();
+  visit(ctx->basicType());
+  TypesMgr::TypeId t = getTypeDecor(ctx->basicType());
+  putTypeDecor(ctx, t);
+  DEBUG_EXIT();
+  return 0;
+}
+
+std::any SymbolsVisitor::visitArrayType(AslParser::ArrayTypeContext *ctx) {
+  DEBUG_ENTER();
+  visit(ctx->basicType());
+  TypesMgr::TypeId t = getTypeDecor(ctx->basicType());
+  int size = std::stoi(ctx->INTVAL()->getText());
+  TypesMgr::TypeId tRet = Types.createArrayTy(size, t);
+  putTypeDecor(ctx, tRet);
+  DEBUG_EXIT();
+  return 0;
+}
 
 // std::any SymbolsVisitor::visitStatements(AslParser::StatementsContext *ctx) {
 //   DEBUG_ENTER();
@@ -273,15 +279,14 @@ std::any SymbolsVisitor::visitParams(AslParser::ParamsContext *ctx) {
   return 0;
 }
 
-std::any SymbolsVisitor::visitAnycast(AslParser::AnycastContext *ctx) {
+std::any SymbolsVisitor::visitAnyCast(AslParser::AnyCastContext *ctx) {
   DEBUG_ENTER();
-  visit(ctx->type());
-  TypesMgr::TypeId t = getTypeDecor(ctx->type());
+  visit(ctx->basicType());
+  TypesMgr::TypeId t = getTypeDecor(ctx->basicType());
   putTypeDecor(ctx, t);
   DEBUG_EXIT();
   return 0;
 }
-
 
 // Getters for the necessary tree node atributes:
 //   Scope and Type

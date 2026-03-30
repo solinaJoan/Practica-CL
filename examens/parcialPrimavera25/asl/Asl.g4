@@ -49,14 +49,18 @@ variable_decl
         : VAR ID (',' ID)* ':' type
         ;
 
-type    : INT
+basicType
+        : INT
         | FLOAT
         | BOOL
         | CHAR
-        | ARRAY '[' INTVAL ']' ('[' INTVAL ']')* OF type
         | ANY
         ;
 
+type    : basicType                             # basicTypeLabel
+        | ARRAY '[' INTVAL ']' OF basicType     # arrayType
+        ;
+        
 statements
         : (statement)*
         ;
@@ -66,34 +70,30 @@ statement
           // Assignment
         : left_expr ASSIGN expr ';'                                     # assignStmt
         | IF expr THEN statements (ELSE statements)? ENDIF              # ifStmt
-        | WHILE expr DO statements ENDWHILE   # whileStmt
-          // A function/procedure call has a list of arguments in parenthesis (possibly empty)
-        | ident '(' lParams? ')' ';'                   # procCall
-          // Read a variable
-        | READ left_expr ';'                  # readStmt
-          // Write an expression
-        | WRITE expr ';'                      # writeExpr
-          // Write a string
-        | WRITE STRING ';'                    # writeString
-        | RETURN expr? ';'                          # return
+        | WHILE expr DO statements ENDWHILE                             # whileStmt
+        | functionCall ';'                                              # functionCallStmt
+        | READ left_expr ';'                                            # readStmt
+        | WRITE expr ';'                                                # writeExpr
+        | WRITE STRING ';'                                              # writeString
+        | RETURN expr? ';'                                              # return
         ;
 
 // Grammar for left expressions (l-values in C++)
 left_expr 
-        : array
-        | ident
+        : array                                          # arrayLeftExpr                              
+        | ident                                          # identLeftExpr  
         ;
 
 // Grammar for expressions with boolean, relational and aritmetic operators
 expr    : '(' expr ')'                                   # parenthesis
-        | ANYCAST '<' type '>' '(' expr ')'              # anycast
-        | ident '(' lParams? ')'                         # functionCall
+        | ANYCAST '<' basicType '>' '(' expr ')'         # anyCast
+        | functionCall                                   # functionCallExpr
         | array                                          # arrayAccess
         | op=MINUS expr                                  # unary
+        | op=NOT expr                                    # not
         | expr op=(MUL|DIV|MOD) expr                     # arithmetic
         | expr op=(PLUS|MINUS) expr                      # arithmetic
         | expr op=(EQ|NE|LT|LE|GT|GE) expr               # relational
-        | op=NOT expr                                    # not
         | expr op=AND expr                               # logic
         | expr op=OR expr                                # logic
         | INTVAL                                         # intVal
@@ -103,18 +103,9 @@ expr    : '(' expr ')'                                   # parenthesis
         | ident                                          # exprIdent
         ;
 
-
 // Array
-array : ident '[' expr ']'                    # arrayNormal
-      | ident '[' INTVAL ':' INTVAL ']'        # arraySlice
-      | array  '[' expr ']'                   # arrayMultiDim
-      ;
-
-// array   : ident '[' expr ']'
-//         | ident '[' INTVAL ':' INTVAL']'
-//         | array '[' expr ']'
-//        ;
-
+array   : ident '[' expr ']'
+        ;
 
 // Identifiers
 ident   : ID
@@ -124,12 +115,16 @@ ident   : ID
 params  : ID ':' type (',' ID ':' type)*             
         ;
 
-lParams : (expr (',' expr)*)
+functionCall 
+        : ident '(' (expr (',' expr)*)? ')'
         ;
 
 //////////////////////////////////////////////////
 /// Lexer Rules
 //////////////////////////////////////////////////
+
+ANY       : 'any' ;
+ANYCAST   : 'anycast' ;
 
 NOT       : 'not' ;
 AND       : 'and' ;
@@ -151,8 +146,6 @@ INT       : 'int';
 FLOAT     : 'float';
 BOOL      : 'bool';
 CHAR      : 'char';
-ANY       : 'any' ;
-ANYCAST   : 'anycast' ;
 IF        : 'if' ;
 THEN      : 'then' ;
 ELSE      : 'else' ;
@@ -170,9 +163,11 @@ OF        : 'of' ;
 BOOLVAL   : ('true'|'false') ;
 INTVAL    : ('0'..'9')+ ;
 FLOATVAL  : ('0'..'9')+ '.' ('0'..'9')+ ;
-CHARVAL   : '\''('a'..'z'|'A'..'Z'|'0'..'9'|' '|'\''|'\t'|'\n'|'@')'\'';
+CHARVAL   : '\'' ( ESC_SEQ | SAFE_CHAR ) '\'';
 ID        : ('a'..'z'|'A'..'Z') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')* ;
 
+fragment 
+SAFE_CHAR  : ~['\\\r\n] ;
 
 // Strings (in quotes) with escape sequences
 STRING    : '"' ( ESC_SEQ | ~('\\'|'"') )* '"' ;
