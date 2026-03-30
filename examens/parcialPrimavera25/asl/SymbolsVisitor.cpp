@@ -159,10 +159,15 @@ std::any SymbolsVisitor::visitBasicTypeLabel(AslParser::BasicTypeLabelContext *c
 std::any SymbolsVisitor::visitArrayType(AslParser::ArrayTypeContext *ctx) {
   DEBUG_ENTER();
   visit(ctx->basicType());
-  TypesMgr::TypeId t = getTypeDecor(ctx->basicType());
-  int size = std::stoi(ctx->INTVAL()->getText());
-  TypesMgr::TypeId tRet = Types.createArrayTy(size, t);
-  putTypeDecor(ctx, tRet);
+  TypesMgr::TypeId t;
+  TypesMgr::TypeId tElem = getTypeDecor(ctx->basicType());
+  int dimension = ctx->INTVAL().size();
+  for (int i = dimension-1; i >= 0; --i) {
+    int size = std::stoi(ctx->INTVAL(i)->getText());
+    t = Types.createArrayTy(size, tElem);
+    tElem = t;
+  }
+  putTypeDecor(ctx, t);
   DEBUG_EXIT();
   return 0;
 }

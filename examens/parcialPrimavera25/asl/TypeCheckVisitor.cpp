@@ -474,7 +474,7 @@ std::any TypeCheckVisitor::visitExprIdent(AslParser::ExprIdentContext *ctx)
     return 0;
 }
 
-std::any TypeCheckVisitor::visitArrayAccess(AslParser::ArrayAccessContext *ctx)
+std::any TypeCheckVisitor::visitArrayAccessExpr(AslParser::ArrayAccessExprContext *ctx)
 {
     DEBUG_ENTER();
     visit(ctx->array());
@@ -485,26 +485,126 @@ std::any TypeCheckVisitor::visitArrayAccess(AslParser::ArrayAccessContext *ctx)
     return 0;
 }
 
+// std::any TypeCheckVisitor::visitArray(AslParser::ArrayContext *ctx)
+// {
+//     DEBUG_ENTER();
+//     visitChildren(ctx);
+//     // visit(ctx->expr());
+//     TypesMgr::TypeId tArray = getTypeDecor(ctx->ident());
+//     // TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr());
+    
+//     if (not Types.isErrorTy(tArray)) {
+//         if (not Types.isArrayTy(tArray)) {
+//             Errors.nonArrayInArrayAccess(ctx->ident());
+//         } else {
+//             TypesMgr::TypeId tElemArray = Types.getArrayElemType(tArray);
+//             putTypeDecor(ctx, tElemArray);
+//         }
+//     } 
+    
+//     // if (not Types.isErrorTy(tExpr) and not Types.isIntegerTy(tExpr))
+//     //     Errors.nonIntegerIndexInArrayAccess(ctx->expr());
+    
+//     DEBUG_EXIT();
+//     return 0;
+// }
+
 std::any TypeCheckVisitor::visitArray(AslParser::ArrayContext *ctx)
 {
     DEBUG_ENTER();
-    visit(ctx->ident());
-    visit(ctx->expr());
-    TypesMgr::TypeId tArray = getTypeDecor(ctx->ident());
-    TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr());
-    
+    visitChildren(ctx);
+    // if (ctx->ident()) {
+    //     TypesMgr::TypeId tArray = getTypeDecor(ctx->ident());
+    //     if (not Types.isErrorTy(tArray)) {
+    //         if (not Types.isArrayTy(tArray)) {
+    //             Errors.nonArrayInArrayAccess(ctx->ident());
+    //         } else {
+    //             TypesMgr::TypeId tElemArray = Types.getArrayElemType(tArray);
+    //             putTypeDecor(ctx, tElemArray);
+    //         }
+    //     } 
+    // } else {
+    //     TypesMgr::TypeId tArray = getTypeDecor(ctx->array());
+    //     if (not Types.isErrorTy(tArray)) {
+    //         if (not Types.isArrayTy(tArray)) {
+    //             Errors.nonArrayInArrayAccess(ctx->array());
+    //         } else {
+    //             TypesMgr::TypeId tElemArray = Types.getArrayElemType(tArray);
+    //             putTypeDecor(ctx, tElemArray);
+    //         }
+    //     } 
+    // }
+    antlr4::ParserRuleContext *base = ctx->ident() ? 
+        (antlr4::ParserRuleContext *)ctx->ident() : 
+        (antlr4::ParserRuleContext *)ctx->array();
+
+    TypesMgr::TypeId tArray = getTypeDecor(base);
+    TypesMgr::TypeId tRes = Types.createErrorTy();
     if (not Types.isErrorTy(tArray)) {
         if (not Types.isArrayTy(tArray)) {
-            Errors.nonArrayInArrayAccess(ctx->ident());
+            Errors.nonArrayInArrayAccess(base);
         } else {
-            TypesMgr::TypeId tElemArray = Types.getArrayElemType(tArray);
-            putTypeDecor(ctx, tElemArray);
+            tRes = Types.getArrayElemType(tArray);
         }
-    } 
+    }
+
+    // Tot el relacionat amb array acces, ja que amb els slices ens va bé saber el tipus del array al que volem fer accés
+    if (ctx->arrayAccess()->expr()) {
+        visit(ctx->arrayAccess()->expr());
+        TypesMgr::TypeId tExpr = getTypeDecor(ctx->arrayAccess()->expr());
+        
+        if (not Types.isErrorTy(tExpr) and not Types.isIntegerTy(tExpr))
+            Errors.nonIntegerIndexInArrayAccess(ctx->arrayAccess()->expr());
+    } else {
+        int lo = stoi(ctx->arrayAccess()->INTVAL(0)->getText());
+        int hi = stoi(ctx->arrayAccess()->INTVAL(1)->getText());
+
+        if (Types.isArrayTy(tRes)) {
+            int arrSize = Types.getArraySize(tRes);
+            TypesMgr::TypeId tElem = Types.getArrayElemType(tRes);
+
+            if (lo > hi) Errors.invalidLimitsInSlice(ctx);
+            if (lo < 0 or hi >= arrSize) Errors.invalidLimitsInSlice(ctx);
+
+            int sliceSize = (lo <= hi and lo >= 0 and hi < arrSize)
+                            ? (hi - lo + 1) : arrSize;
+            tRes = Types.createArrayTy(sliceSize, tElem);
+        }
+    }
     
-    if (not Types.isErrorTy(tExpr) and not Types.isIntegerTy(tExpr))
-        Errors.nonIntegerIndexInArrayAccess(ctx->expr());
-    
+    putTypeDecor(ctx, tRes);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitArrayAccess(AslParser::ArrayAccessContext *ctx)
+{
+    DEBUG_ENTER();
+    // if (ctx->expr()) {
+    //     visit(ctx->expr());
+    //     TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr());
+        
+    //     if (not Types.isErrorTy(tExpr) and not Types.isIntegerTy(tExpr))
+    //         Errors.nonIntegerIndexInArrayAccess(ctx->expr());
+    // } else {
+    //     // int lo = stoi(ctx->INTVAL(0)->getText());
+    //     // int hi = stoi(ctx->INTVAL(1)->getText());
+
+    //     // TypesMgr::TypeId tResult;
+    //     // if (Types.isArrayTy(t)) {
+    //     //     int arrSize = Types.getArraySize(t);
+    //     //     TypesMgr::TypeId tElem = Types.getArrayElemType(t);
+
+    //     //     if (lo > hi)
+    //     //         Errors.invalidLimitsInSlice(ctx);
+    //     //     if (lo < 0 or hi >= arrSize)
+    //     //         Errors.invalidLimitsInSlice(ctx);
+
+    //     //     int sliceSize = (lo <= hi and lo >= 0 and hi < arrSize)
+    //     //                     ? (hi - lo + 1) : arrSize;
+    //     //     tResult = Types.createArrayTy(sliceSize, tElem);
+    //     // }
+    // }
     DEBUG_EXIT();
     return 0;
 }

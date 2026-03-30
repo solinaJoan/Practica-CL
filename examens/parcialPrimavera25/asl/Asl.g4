@@ -57,8 +57,8 @@ basicType
         | ANY
         ;
 
-type    : basicType                             # basicTypeLabel
-        | ARRAY '[' INTVAL ']' OF basicType     # arrayType
+type    : basicType                                # basicTypeLabel
+        | ARRAY ('[' INTVAL ']')+ OF basicType     # arrayType
         ;
         
 statements
@@ -88,7 +88,7 @@ left_expr
 expr    : '(' expr ')'                                   # parenthesis
         | ANYCAST '<' basicType '>' '(' expr ')'         # anyCast
         | functionCall                                   # functionCallExpr
-        | array                                          # arrayAccess
+        | array                                          # arrayAccessExpr
         | op=MINUS expr                                  # unary
         | op=NOT expr                                    # not
         | expr op=(MUL|DIV|MOD) expr                     # arithmetic
@@ -104,8 +104,14 @@ expr    : '(' expr ')'                                   # parenthesis
         ;
 
 // Array
-array   : ident '[' expr ']'
+array   : ident arrayAccess
+        | array arrayAccess
         ;
+
+arrayAccess
+        : '[' expr ']'
+        | '[' INTVAL ':' INTVAL ']'
+        ;  
 
 // Identifiers
 ident   : ID
