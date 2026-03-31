@@ -539,40 +539,41 @@ std::any TypeCheckVisitor::visitArray(AslParser::ArrayContext *ctx)
         (antlr4::ParserRuleContext *)ctx->array();
 
     TypesMgr::TypeId tArray = getTypeDecor(base);
-    TypesMgr::TypeId tRes = Types.createErrorTy();
-    if (not Types.isErrorTy(tArray)) {
-        if (not Types.isArrayTy(tArray)) {
-            Errors.nonArrayInArrayAccess(base);
-        } else {
-            tRes = Types.getArrayElemType(tArray);
-        }
-    }
+    TypesMgr::TypeId tElem = Types.createErrorTy();
+    if (Types.isArrayTy(tArray)) tElem = Types.getArrayElemType(tArray);
 
+    bool nonArrayInarraySliceErr = false;
     // Tot el relacionat amb array acces, ja que amb els slices ens va bé saber el tipus del array al que volem fer accés
     if (ctx->arrayAccess()->expr()) {
         visit(ctx->arrayAccess()->expr());
         TypesMgr::TypeId tExpr = getTypeDecor(ctx->arrayAccess()->expr());
         
         if (not Types.isErrorTy(tExpr) and not Types.isIntegerTy(tExpr))
-            Errors.nonIntegerIndexInArrayAccess(ctx->arrayAccess()->expr());
+        Errors.nonIntegerIndexInArrayAccess(ctx->arrayAccess()->expr());
     } else {
         int lo = stoi(ctx->arrayAccess()->INTVAL(0)->getText());
         int hi = stoi(ctx->arrayAccess()->INTVAL(1)->getText());
-
-        if (Types.isArrayTy(tRes)) {
-            int arrSize = Types.getArraySize(tRes);
-            TypesMgr::TypeId tElem = Types.getArrayElemType(tRes);
-
+        
+        if (Types.isArrayTy(tArray)) {
+            int arrSize = Types.getArraySize(tArray);
             if (lo > hi) Errors.invalidLimitsInSlice(ctx);
             if (lo < 0 or hi >= arrSize) Errors.invalidLimitsInSlice(ctx);
-
+            
             int sliceSize = (lo <= hi and lo >= 0 and hi < arrSize)
-                            ? (hi - lo + 1) : arrSize;
-            tRes = Types.createArrayTy(sliceSize, tElem);
+            ? (hi - lo + 1) : arrSize;
+            tElem = Types.createArrayTy(sliceSize, tElem);
+        } else {
+            Errors.nonArrayInArraySlice(ctx);
+            nonArrayInarraySliceErr = true;
         }
     }
     
-    putTypeDecor(ctx, tRes);
+    if (not Types.isErrorTy(tArray) and not Types.isArrayTy(tArray) and not nonArrayInarraySliceErr) {
+        Errors.nonArrayInArrayAccess(base);
+    }
+
+    // Hem de posar el tipus dels elements de l'array
+    putTypeDecor(ctx, tElem);
     DEBUG_EXIT();
     return 0;
 }
