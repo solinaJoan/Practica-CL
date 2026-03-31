@@ -572,7 +572,6 @@ std::any TypeCheckVisitor::visitForStmt(AslParser::ForStmtContext *ctx){
     }
     if (Types.isErrorTy(Types.getArrayElemType(tRange))) {
         Errors.numberOfRangeExpressions(ctx);
-        
     }
     DEBUG_EXIT();
     return 0;
