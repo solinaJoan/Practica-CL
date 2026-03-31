@@ -49,13 +49,18 @@ variable_decl
         : VAR ID (',' ID)* ':' type
         ;
 
-type    : INT
+basicType
+        : INT
         | FLOAT
         | BOOL
         | CHAR
-        | ARRAY '[' INTVAL ']' OF type
         ;
 
+type    : basicType                             # basicTypeLabel
+        | ARRAY '[' INTVAL ']' OF basicType     # arrayType
+        | POINTER TO type                       # pointerType
+        ;
+        
 statements
         : (statement)*
         ;
@@ -65,44 +70,48 @@ statement
           // Assignment
         : left_expr ASSIGN expr ';'                                     # assignStmt
         | IF expr THEN statements (ELSE statements)? ENDIF              # ifStmt
-        | WHILE expr DO statements ENDWHILE   # whileStmt
-          // A function/procedure call has a list of arguments in parenthesis (possibly empty)
-        | ident '(' lParams? ')' ';'                   # procCall
-          // Read a variable
-        | READ left_expr ';'                  # readStmt
-          // Write an expression
-        | WRITE expr ';'                      # writeExpr
-          // Write a string
-        | WRITE STRING ';'                    # writeString
-        | RETURN expr? ';'                          # return
-        | CASE expr OF lCases* (DEFAULT ':' statements)? ENDCASE           # caseStmt
+        | WHILE expr DO statements ENDWHILE                             # whileStmt
+        | functionCall ';'                                              # functionCallStmt
+        | READ left_expr ';'                                            # readStmt
+        | WRITE expr ';'                                                # writeExpr
+        | WRITE STRING ';'                                              # writeString
+        | RETURN expr? ';'                                              # return
+        | CASE expr OF lCases* (DEFAULT ':' statements)? ENDCASE        # caseStmt
+        ;
+
+lCases  : expr (',' expr)* ':' statements
         ;
 
 // Grammar for left expressions (l-values in C++)
 left_expr 
-        : array
-        | ident
+        : array                                          # arrayLeftExpr                              
+        | ident                                          # identLeftExpr  
+        | pointerDereferentation                         # pointerDeref
         ;
 
 // Grammar for expressions with boolean, relational and aritmetic operators
 expr    : '(' expr ')'                                   # parenthesis
-        | ident '(' lParams? ')'                         # functionCall
+        | functionCall                                   # functionCallExpr
         | array                                          # arrayAccess
+        | pointerDereferentation                         # pointerDerefExpr
+        | '&' expr                                       # pointerCreation
         | op=MINUS expr                                  # unary
+        | op=NOT expr                                    # not
         | expr op=(MUL|DIV|MOD) expr                     # arithmetic
         | expr op=(PLUS|MINUS) expr                      # arithmetic
         | expr op=(EQ|NE|LT|LE|GT|GE) expr               # relational
-        | op=NOT expr                                    # not
         | expr op=AND expr                               # logic
         | expr op=OR expr                                # logic
         | INTVAL                                         # intVal
         | FLOATVAL                                       # floatVal
         | BOOLVAL                                        # boolVal
         | CHARVAL                                        # charVal
+        | NULLTOKEN                                      # nullToken      
         | ident                                          # exprIdent
         ;
 
-lCases  : expr (',' expr)* ':' statements
+pointerDereferentation
+        : '*' expr
         ;
 
 // Array
@@ -117,7 +126,8 @@ ident   : ID
 params  : ID ':' type (',' ID ':' type)*             
         ;
 
-lParams : (expr (',' expr)*)
+functionCall 
+        : ident '(' (expr (',' expr)*)? ')'
         ;
 
 //////////////////////////////////////////////////
@@ -127,6 +137,11 @@ lParams : (expr (',' expr)*)
 CASE      : 'case';
 DEFAULT   : 'default';
 ENDCASE   : 'endcase';
+POINTER   : 'pointer';
+TO        : 'to';
+NULLTOKEN      
+          : 'null';
+
 NOT       : 'not' ;
 AND       : 'and' ;
 OR        : 'or' ;       

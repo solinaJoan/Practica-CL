@@ -64,7 +64,9 @@ public:
   std::any visitFunction(AslParser::FunctionContext *ctx);
   std::any visitDeclarations(AslParser::DeclarationsContext *ctx);
   std::any visitVariable_decl(AslParser::Variable_declContext *ctx);
-  std::any visitType(AslParser::TypeContext *ctx);
+  std::any visitBasicType(AslParser::BasicTypeContext *ctx);
+  std::any visitBasicTypeLabel(AslParser::BasicTypeLabelContext *ctx);
+  std::any visitArrayType(AslParser::ArrayTypeContext *ctx);
   // std::any visitStatements(AslParser::StatementsContext *ctx);
   // std::any visitAssignStmt(AslParser::AssignStmtContext *ctx);
   // std::any visitIfStmt(AslParser::IfStmtContext *ctx);
@@ -79,7 +81,8 @@ public:
   // std::any visitValue(AslParser::ValueContext *ctx);
   // std::any visitIdent(AslParser::IdentContext *ctx);
   std::any visitParams(AslParser::ParamsContext *ctx);
-
+  
+  std::any visitPointerType(AslParser::PointerTypeContext *ctx);
 
 private:
 
