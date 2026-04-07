@@ -79,7 +79,7 @@ statement
         | SWITCH expr ':' lCases* (DEFAULT ':' statements)? ENDSWITCH   # switchStmt
         ;
 
-lCases  : CASE ':' expr (',' expr)* ':' statements
+lCases  : CASE expr (',' expr)* ':' statements ENDCASE
         ;
 
 // Grammar for left expressions (l-values in C++)
@@ -129,6 +129,7 @@ functionCall
 SWAP      : 'swap' ;
 SWITCH    : 'switch' ;
 CASE      : 'case' ;
+ENDCASE   : 'endcase' ;
 DEFAULT   : 'default' ;
 ENDSWITCH : 'endswitch' ;
 

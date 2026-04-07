@@ -1,10 +1,37 @@
-PP25: tot fet, afegir tipus any i anycast i fer arrays multidimensionals i slices
-PP24: tot fet, try-catch throw, i arrays inicialization {5}^10:{1,2,3}
-PP23: fet case (com un switch) i falten punters
-FP23: tot fet, foreach x in array do i reduce(array, funcio)
-PP22: tot fet, mapeig d'arrays a = [cond ? expr1 : expr2 for x in b] i structs
-PP21: tot fet, pack, unpack i tuples 'var q : {float , int}', a = q{0} + 8
-PP20: tot fet, max(int, float/ char / bool) i for int in range(1,2,3)/ expr/ array do endfor
+P25: tot fet, 
+- afegir tipus any i anycast 
+- fer arrays multidimensionals i slices
+
+F25: tot fet,
+- array[index!expr] accés segur per si l'index cau fora el rang
+- zip arrayA and arrayB into arrayC 
+
+P24: tot fet, 
+- try-catch throw statement
+- arrays inicialization {5}^10:{1,2,3}
+
+F24: tot fet,
+- swap(left_expr, left_expr)
+- switch expr : case expr : statements ... (default : statements)?
+
+P23: falten alguns exercicis de punters
+- case (com un switch) 
+
+F23: tot fet, 
+- foreach x in array do 
+- reduce(array, funcio);
+
+P22: tot fet,
+- mapeig d'arrays a = [cond ? expr1 : expr2 for x in b] 
+- structs 'var q : struct {a: float , b: int}', q.a = q.b + 8;
+
+P21: tot fet, 
+- pack expr, expr, expr into array i unpack array into expr expr
+- tuples 'var q : {float , int}', a = q{0} + 8
+
+P20: tot fet, 
+- max(int, float/ char / bool)
+- for int in range(1,2,3)/ expr/ array do endfor
 
 
 Util commands:

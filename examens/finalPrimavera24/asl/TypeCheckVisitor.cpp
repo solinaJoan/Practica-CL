@@ -542,7 +542,25 @@ std::any TypeCheckVisitor::visitSwap(AslParser::SwapContext *ctx){
     if (not Types.isErrorTy(t) and not Types.isErrorTy(t2) and not Types.copyableTypes(t2, t)) {
         Errors.incompatibleArgumentsInSwap(ctx);
     }
-    putTypeDecor(ctx, t);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitSwitchStmt(AslParser::SwitchStmtContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->expr());
+    if (ctx->statements()) visit(ctx->statements());
+    TypesMgr::TypeId t = getTypeDecor(ctx->expr());
+    for (auto caseCtx : ctx->lCases()) {
+        for (auto exprCtx : caseCtx->expr()) {
+            visit(exprCtx);
+            TypesMgr::TypeId tExprCase = getTypeDecor(exprCtx);
+            if (not Types.isErrorTy(tExprCase) and not Types.isErrorTy(t) and not Types.comparableTypes(t, tExprCase, "=")) {
+                Errors.incompatibleValueInSwitch(exprCtx);
+            }
+        }
+        visit(caseCtx->statements());
+    }
     DEBUG_EXIT();
     return 0;
 }
