@@ -243,6 +243,25 @@ std::any CodeGenVisitor::visitParenthesis(AslParser::ParenthesisContext *ctx) {
   return codAts;
 }
 
+std::any CodeGenVisitor::visitUnary(AslParser::UnaryContext *ctx) {
+  DEBUG_ENTER();
+  CodeAttribs     && codAt = std::any_cast<CodeAttribs>(visit(ctx->expr()));
+  std::string         addr = codAt.addr;
+  instructionList &   code = codAt.code;
+  std::string temp = "%"+codeCounters.newTEMP();
+  TypesMgr::TypeId t = getTypeDecor(ctx->expr());
+
+  if (Types.isFloatTy(t)) {
+    code = code || instruction::FNEG(temp, addr);
+  } else {
+    code = code || instruction::NEG(temp, addr);
+  }
+  CodeAttribs codAts(temp, "", code);
+  DEBUG_EXIT();
+  return codAts;
+}
+
+
 std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
   DEBUG_ENTER();
   CodeAttribs     && codAt1 = std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
@@ -256,31 +275,35 @@ std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
   // TypesMgr::TypeId  t = getTypeDecor(ctx);
   std::string temp = "%"+codeCounters.newTEMP();
-  // Hem de saber quin és float i convertir l'altre en float
-  if (Types.isFloatTy(t1) && Types.isFloatTy(t2)) {
-    if (ctx->MUL())
-      code = code || instruction::FMUL(temp, addr1, addr2);
-    else if (ctx->PLUS())
-      code = code || instruction::FADD(temp, addr1, addr2);
-  } else if (Types.isFloatTy(t1)) {
-    std::string temp_float = "%"+codeCounters.newTEMP();
-    code = code || instruction::FLOAT(temp_float, addr2);
-    if (ctx->MUL())
-      code = code || instruction::FMUL(temp, addr1, temp_float);
-    else if(ctx->PLUS())
-      code = code || instruction::FADD(temp, addr1, temp_float);
-  } else if (Types.isFloatTy(t2)) {
-    std::string temp_float = "%"+codeCounters.newTEMP();
-    code = code || instruction::FLOAT(temp_float, addr1);
-    if (ctx->MUL())
-      code = code || instruction::FMUL(temp, temp_float, addr2);
-    else if(ctx->PLUS())
-      code = code || instruction::FADD(temp, temp_float, addr2);
+
+  if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) {
+    std::string addr1_f = "%"+codeCounters.newTEMP();
+    code = code || instruction::FLOAT(addr1_f, addr1);
+    std::string addr2_f = "%"+codeCounters.newTEMP();
+    code = code || instruction::FLOAT(addr2_f, addr2);
+    if (ctx->MUL()) {
+      code = code || instruction::FMUL(temp, addr1_f, addr2_f);
+    } else if (ctx->PLUS()) {
+      code = code || instruction::FADD(temp, addr1_f, addr2_f);
+    } else if (ctx->DIV()) {
+      code = code || instruction::FDIV(temp, addr1_f, addr2_f);
+    } else if (ctx->MINUS()) {
+      code = code || instruction::FSUB(temp, addr1_f, addr2_f);
+    } else if (ctx->MOD()) {
+      // Todo
+    }
   } else {
-    if (ctx->MUL())
+    if (ctx->MUL()) {
       code = code || instruction::MUL(temp, addr1, addr2);
-    else if(ctx->PLUS())
+    } else if(ctx->PLUS()) {
       code = code || instruction::ADD(temp, addr1, addr2);
+    } else if (ctx->DIV()) {
+      code = code || instruction::DIV(temp, addr1, addr2);
+    } else if (ctx->MINUS()) {
+      code = code || instruction::SUB(temp, addr1, addr2);
+    } else if (ctx->MOD()) {
+      // Todo
+    }
   }
   CodeAttribs codAts(temp, "", code);
   DEBUG_EXIT();
