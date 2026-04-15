@@ -101,8 +101,10 @@ std::any CodeGenVisitor::visitDeclarations(AslParser::DeclarationsContext *ctx) 
   DEBUG_ENTER();
   std::vector<var> lvars;
   for (auto & varDeclCtx : ctx->variable_decl()) {
-    var onevar = std::any_cast<var>(visit(varDeclCtx));
-    lvars.push_back(onevar);
+    std::vector<var> vars = std::any_cast<std::vector<var>>(visit(varDeclCtx));
+    for (auto & var : vars) {
+      lvars.push_back(var);
+    }
   }
   DEBUG_EXIT();
   return lvars;
@@ -110,11 +112,15 @@ std::any CodeGenVisitor::visitDeclarations(AslParser::DeclarationsContext *ctx) 
 
 std::any CodeGenVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx) {
   DEBUG_ENTER();
-  TypesMgr::TypeId   t1 = getTypeDecor(ctx->type());
-  std::size_t      size = Types.getSizeOfType(t1);
+  std::vector<var> lvars;
+  for (auto & varID : ctx->ID()) {
+    TypesMgr::TypeId   t1 = getTypeDecor(ctx->type());
+    std::size_t      size = Types.getSizeOfType(t1);
+    var onevar = var{varID->getText(), Types.to_string(t1), size};
+    lvars.push_back(onevar);
+  }
   DEBUG_EXIT();
-  // TODO: canviar el ID(0) per un bucle amb tots els ID
-  return var{ctx->ID(0)->getText(), Types.to_string(t1), size};
+  return lvars;
 }
 
 std::any CodeGenVisitor::visitStatements(AslParser::StatementsContext *ctx) {
@@ -192,8 +198,10 @@ std::any CodeGenVisitor::visitWriteExpr(AslParser::WriteExprContext *ctx) {
   // std::string         offs1 = codAt1.offs;
   instructionList &   code1 = codAt1.code;
   instructionList &    code = code1;
-  // TypesMgr::TypeId tid1 = getTypeDecor(ctx->expr());
-  code = code1 || instruction::WRITEI(addr1);
+  TypesMgr::TypeId tid1 = getTypeDecor(ctx->expr());
+  if (Types.isIntegerTy(tid1) or Types.isBooleanTy(tid1)) code = code1 || instruction::WRITEI(addr1);
+  else if (Types.isFloatTy(tid1)) code = code1 || instruction::WRITEF(addr1);
+  else if (Types.isCharacterTy(tid1)) code = code1 || instruction::WRITEC(addr1);
   DEBUG_EXIT();
   return code;
 }
@@ -228,6 +236,13 @@ std::any CodeGenVisitor::visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx
   return codAts;
 }
 
+std::any CodeGenVisitor::visitParenthesis(AslParser::ParenthesisContext *ctx) {
+  DEBUG_ENTER();
+  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->expr()));
+  DEBUG_EXIT();
+  return codAts;
+}
+
 std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
   DEBUG_ENTER();
   CodeAttribs     && codAt1 = std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
@@ -237,14 +252,36 @@ std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
   std::string         addr2 = codAt2.addr;
   instructionList &   code2 = codAt2.code;
   instructionList &&   code = code1 || code2;
-  // TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
-  // TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
+  TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
+  TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
   // TypesMgr::TypeId  t = getTypeDecor(ctx);
   std::string temp = "%"+codeCounters.newTEMP();
-  if (ctx->MUL())
-    code = code || instruction::MUL(temp, addr1, addr2);
-  else // (ctx->PLUS())
-    code = code || instruction::ADD(temp, addr1, addr2);
+  // Hem de saber quin és float i convertir l'altre en float
+  if (Types.isFloatTy(t1) && Types.isFloatTy(t2)) {
+    if (ctx->MUL())
+      code = code || instruction::FMUL(temp, addr1, addr2);
+    else if (ctx->PLUS())
+      code = code || instruction::FADD(temp, addr1, addr2);
+  } else if (Types.isFloatTy(t1)) {
+    std::string temp_float = "%"+codeCounters.newTEMP();
+    code = code || instruction::FLOAT(temp_float, addr2);
+    if (ctx->MUL())
+      code = code || instruction::FMUL(temp, addr1, temp_float);
+    else if(ctx->PLUS())
+      code = code || instruction::FADD(temp, addr1, temp_float);
+  } else if (Types.isFloatTy(t2)) {
+    std::string temp_float = "%"+codeCounters.newTEMP();
+    code = code || instruction::FLOAT(temp_float, addr1);
+    if (ctx->MUL())
+      code = code || instruction::FMUL(temp, temp_float, addr2);
+    else if(ctx->PLUS())
+      code = code || instruction::FADD(temp, temp_float, addr2);
+  } else {
+    if (ctx->MUL())
+      code = code || instruction::MUL(temp, addr1, addr2);
+    else if(ctx->PLUS())
+      code = code || instruction::ADD(temp, addr1, addr2);
+  }
   CodeAttribs codAts(temp, "", code);
   DEBUG_EXIT();
   return codAts;
@@ -281,23 +318,32 @@ std::any CodeGenVisitor::visitIntVal(AslParser::IntValContext *ctx) {
 
 std::any CodeGenVisitor::visitFloatVal(AslParser::FloatValContext *ctx) {
   DEBUG_ENTER();
-  // TODO
+  instructionList code;
+  std::string temp = "%"+codeCounters.newTEMP();
+  code = instruction::FLOAD(temp, ctx->getText());
+  CodeAttribs codAts(temp, "", code);
   DEBUG_EXIT();
-  return 0;
+  return codAts;
 }
 
 std::any CodeGenVisitor::visitBoolVal(AslParser::BoolValContext *ctx) {
   DEBUG_ENTER();
-  // TODO
+  instructionList code;
+  std::string temp = "%"+codeCounters.newTEMP();
+  code = instruction::ILOAD(temp, ctx->getText());
+  CodeAttribs codAts(temp, "", code);
   DEBUG_EXIT();
-  return 0;
+  return codAts;
 }
 
 std::any CodeGenVisitor::visitCharVal(AslParser::CharValContext *ctx) {
   DEBUG_ENTER();
-  // TODO
+  instructionList code;
+  std::string temp = "%"+codeCounters.newTEMP();
+  code = instruction::CHLOAD(temp, ctx->getText());
+  CodeAttribs codAts(temp, "", code);
   DEBUG_EXIT();
-  return 0;
+  return codAts;
 }
 
 std::any CodeGenVisitor::visitExprIdent(AslParser::ExprIdentContext *ctx) {
