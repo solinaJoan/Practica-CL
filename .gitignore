@@ -1,6 +1,9 @@
 # Object files
 *.o
 
+# Assembler files
+*.asm
+
 # Generated ANTLR4 files
 *Lexer.h
 *Lexer.cpp
