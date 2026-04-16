@@ -158,12 +158,34 @@ std::any CodeGenVisitor::visitIfStmt(AslParser::IfStmtContext *ctx) {
   CodeAttribs     && codAtsE = std::any_cast<CodeAttribs>(visit(ctx->expr()));
   std::string          addr1 = codAtsE.addr;
   instructionList &    code1 = codAtsE.code;
-  // TODO: Actualitzar el zero qu ehe posat aqui només perque no peti
-  instructionList &&   code2 = std::any_cast<instructionList>(visit(ctx->statements(0)));
+  instructionList &&   codeIf = std::any_cast<instructionList>(visit(ctx->statements(0)));
+  instructionList &&   codeElse = instructionList();
+  if (ctx->ELSE()) {
+    codeElse = std::any_cast<instructionList>(visit(ctx->statements(1)));
+  }
   std::string label = codeCounters.newLabelIF();
+  std::string  labelElse = "else"+label;
   std::string labelEndIf = "endif"+label;
-  code = code1 || instruction::FJUMP(addr1, labelEndIf) ||
-         code2 || instruction::LABEL(labelEndIf);
+  code = code1 || 
+        instruction::FJUMP(addr1, labelElse) || codeIf || instruction::UJUMP(labelEndIf) || 
+        instruction::LABEL(labelElse) || codeElse || instruction::LABEL(labelEndIf);
+  DEBUG_EXIT();
+  return code;
+}
+
+std::any CodeGenVisitor::visitWhileStmt(AslParser::WhileStmtContext *ctx){
+  DEBUG_ENTER();
+  instructionList code;
+  CodeAttribs     && codAtsE = std::any_cast<CodeAttribs>(visit(ctx->expr()));
+  std::string          addr1 = codAtsE.addr;
+  instructionList &    code1 = codAtsE.code;
+
+  instructionList &&   codeStmt = std::any_cast<instructionList>(visit(ctx->statements()));
+  std::string label = codeCounters.newLabelWHILE();
+  std::string    labelWhile = "while"+label;
+  std::string labelEndWhile = "endwhile"+label;
+  code = instruction::LABEL(labelWhile) || code1 || instruction::FJUMP(addr1, labelEndWhile) ||
+         codeStmt || instruction::UJUMP(labelWhile) || instruction::LABEL(labelEndWhile);
   DEBUG_EXIT();
   return code;
 }
@@ -341,6 +363,7 @@ std::any CodeGenVisitor::visitRelational(AslParser::RelationalContext *ctx) {
   // TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
   // TypesMgr::TypeId  t = getTypeDecor(ctx);
   std::string temp = "%"+codeCounters.newTEMP();
+
   if (ctx->EQ()) {
     code = code || instruction::EQ(temp, addr1, addr2);
   } else if (ctx->NE()) {
@@ -383,7 +406,8 @@ std::any CodeGenVisitor::visitBoolVal(AslParser::BoolValContext *ctx) {
   DEBUG_ENTER();
   instructionList code;
   std::string temp = "%"+codeCounters.newTEMP();
-  code = instruction::ILOAD(temp, ctx->getText());
+  std::string value = (ctx->getText() == "true") ? "1" : "0";
+  code = instruction::ILOAD(temp, value);
   CodeAttribs codAts(temp, "", code);
   DEBUG_EXIT();
   return codAts;

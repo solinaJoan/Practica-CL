@@ -16,4 +16,4 @@ EX=$(printf "%02d" "$1")
 make >/dev/null
 
 ./asl < ../examples/jp_genc_${EX}.asl > ../examples/jp_genc_${EX}.asm
-../tvm/tvm ../examples/jp_genc_${EX}.asm
+../tvm/tvm ../examples/jp_genc_${EX}.asm < ../examples/jp_genc_${EX}.in 
