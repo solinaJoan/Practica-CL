@@ -261,6 +261,17 @@ std::any CodeGenVisitor::visitUnary(AslParser::UnaryContext *ctx) {
   return codAts;
 }
 
+std::any CodeGenVisitor::visitNot(AslParser::NotContext *ctx) {
+  DEBUG_ENTER();
+  CodeAttribs     && codAt = std::any_cast<CodeAttribs>(visit(ctx->expr()));
+  std::string         addr = codAt.addr;
+  instructionList &   code = codAt.code;
+  std::string temp = "%"+codeCounters.newTEMP();
+  code = code || instruction::NOT(temp, addr);
+  CodeAttribs codAts(temp, "", code);
+  DEBUG_EXIT();
+  return codAts;
+}
 
 std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
   DEBUG_ENTER();
@@ -275,12 +286,19 @@ std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
   // TypesMgr::TypeId  t = getTypeDecor(ctx);
   std::string temp = "%"+codeCounters.newTEMP();
-
+  // Si hi ha algun float, fem la conversió del que no ho sigui
   if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) {
-    std::string addr1_f = "%"+codeCounters.newTEMP();
-    code = code || instruction::FLOAT(addr1_f, addr1);
-    std::string addr2_f = "%"+codeCounters.newTEMP();
-    code = code || instruction::FLOAT(addr2_f, addr2);
+    std::string addr1_f = addr1;
+    std::string addr2_f = addr2;
+    if (!Types.isFloatTy(t1)) {
+        addr1_f = "%" + codeCounters.newTEMP();
+        code = code || instruction::FLOAT(addr1_f, addr1);
+    }
+    if (!Types.isFloatTy(t2)) {
+        addr2_f = "%" + codeCounters.newTEMP();
+        code = code || instruction::FLOAT(addr2_f, addr2);
+    }
+
     if (ctx->MUL()) {
       code = code || instruction::FMUL(temp, addr1_f, addr2_f);
     } else if (ctx->PLUS()) {
@@ -323,7 +341,19 @@ std::any CodeGenVisitor::visitRelational(AslParser::RelationalContext *ctx) {
   // TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
   // TypesMgr::TypeId  t = getTypeDecor(ctx);
   std::string temp = "%"+codeCounters.newTEMP();
-  code = code || instruction::EQ(temp, addr1, addr2);
+  if (ctx->EQ()) {
+    code = code || instruction::EQ(temp, addr1, addr2);
+  } else if (ctx->NE()) {
+    code = code || instruction::EQ(temp, addr1, addr2) || instruction::NOT(temp, temp);
+  } else if (ctx->LT()) {
+    code = code || instruction::LT(temp, addr1, addr2);
+  } else if (ctx->LE()) {
+    code = code || instruction::LE(temp, addr1, addr2);
+  } else if (ctx->GT()) {
+    code = code || instruction::LE(temp, addr1, addr2) || instruction::NOT(temp, temp);
+  } else if (ctx->GE()) {
+    code = code || instruction::LT(temp, addr1, addr2) || instruction::NOT(temp, temp);
+  }
   CodeAttribs codAts(temp, "", code);
   DEBUG_EXIT();
   return codAts;
