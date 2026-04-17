@@ -86,7 +86,7 @@ left_expr
 // Grammar for expressions with boolean, relational and aritmetic operators
 expr    : '(' expr ')'                                   # parenthesis
         | functionCall                                   # functionCallExpr
-        | array                                          # arrayAccess
+        | array                                          # arrayAccessExpr
         | op=MINUS expr                                  # unary
         | op=NOT expr                                    # not
         | expr op=(MUL|DIV|MOD) expr                     # arithmetic

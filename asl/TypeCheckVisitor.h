@@ -90,7 +90,7 @@ public:
   std::any visitBoolVal(AslParser::BoolValContext *ctx);
   std::any visitCharVal(AslParser::CharValContext *ctx);
   std::any visitExprIdent(AslParser::ExprIdentContext *ctx);
-  std::any visitArrayAccess(AslParser::ArrayAccessContext *ctx);
+  std::any visitArrayAccessExpr(AslParser::ArrayAccessExprContext *ctx);
   std::any visitArray(AslParser::ArrayContext *ctx);
   std::any visitIdent(AslParser::IdentContext *ctx);
 

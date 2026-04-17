@@ -474,7 +474,7 @@ std::any TypeCheckVisitor::visitExprIdent(AslParser::ExprIdentContext *ctx)
     return 0;
 }
 
-std::any TypeCheckVisitor::visitArrayAccess(AslParser::ArrayAccessContext *ctx)
+std::any TypeCheckVisitor::visitArrayAccessExpr(AslParser::ArrayAccessExprContext *ctx)
 {
     DEBUG_ENTER();
     visit(ctx->array());

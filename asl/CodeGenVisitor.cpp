@@ -125,9 +125,20 @@ std::any CodeGenVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx
   std::vector<var> lvars;
   for (auto & varID : ctx->ID()) {
     TypesMgr::TypeId   t1 = getTypeDecor(ctx->type());
-    std::size_t      size = Types.getSizeOfType(t1);
-    var onevar = var{varID->getText(), Types.to_string(t1), size};
-    lvars.push_back(onevar);
+    // Hem d'incloure 
+    if (Types.isArrayTy(t1)) {
+      TypesMgr::TypeId tElem = Types.getArrayElemType(t1);
+      std::size_t      sizeElems = Types.getSizeOfType(tElem);
+      std::size_t      size = Types.getArraySize(t1)*sizeElems;
+      // std::cout << "Mida elements: " << sizeElems << " Mida array: " << Types.getArraySize(t1) << " Mida final: " << size << std::endl; 
+      var onevar = var{varID->getText(), Types.to_string(Types.getArrayElemType(t1)), size};
+      lvars.push_back(onevar);
+    }
+    else {
+      std::size_t      size = Types.getSizeOfType(t1);
+      var onevar = var{varID->getText(), Types.to_string(t1), size};
+      lvars.push_back(onevar);
+    }
   }
   DEBUG_EXIT();
   return lvars;
@@ -147,17 +158,22 @@ std::any CodeGenVisitor::visitStatements(AslParser::StatementsContext *ctx) {
 std::any CodeGenVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx) {
   DEBUG_ENTER();
   instructionList code;
+  // TODO: Adaptar la funció a la càrrega d'arrays
   CodeAttribs     && codAtsE1 =  std::any_cast<CodeAttribs>(visit(ctx->left_expr()));
   std::string           addr1 = codAtsE1.addr;
-  // std::string           offs1 = codAtsE1.offs;
+  std::string           offs1 = codAtsE1.offs;
   instructionList &     code1 = codAtsE1.code;
-  // TypesMgr::TypeId tid1 = getTypeDecor(ctx->left_expr());
+  TypesMgr::TypeId tid1 = getTypeDecor(ctx->left_expr());
   CodeAttribs     && codAtsE2 = std::any_cast<CodeAttribs>(visit(ctx->expr()));
   std::string           addr2 = codAtsE2.addr;
   // std::string           offs2 = codAtsE2.offs;
   instructionList &     code2 = codAtsE2.code;
   // TypesMgr::TypeId tid2 = getTypeDecor(ctx->expr());
-  code = code1 || code2 || instruction::LOAD(addr1, addr2);
+  if (Types.isArrayTy(tid1)) {
+    code = code1 || code2 || instruction::XLOAD(addr1, offs1, addr2);
+  } else {
+    code = code1 || code2 || instruction::LOAD(addr1, addr2);
+  }
   DEBUG_EXIT();
   return code;
 }
@@ -246,8 +262,10 @@ std::any CodeGenVisitor::visitReadStmt(AslParser::ReadStmtContext *ctx) {
   // std::string          offs1 = codAtsE.offs;
   instructionList &    code1 = codAtsE.code;
   instructionList &     code = code1;
-  // TypesMgr::TypeId tid1 = getTypeDecor(ctx->left_expr());
-  code = code1 || instruction::READI(addr1);
+  TypesMgr::TypeId tid1 = getTypeDecor(ctx->left_expr());
+  if (Types.isIntegerTy(tid1) or Types.isBooleanTy(tid1)) code = code1 || instruction::READI(addr1);
+  else if (Types.isFloatTy(tid1)) code = code1 || instruction::READF(addr1);
+  else if (Types.isCharacterTy(tid1)) code = code1 || instruction::READC(addr1);
   DEBUG_EXIT();
   return code;
 }
@@ -285,33 +303,10 @@ std::any CodeGenVisitor::visitReturn(AslParser::ReturnContext *ctx) {
     instructionList &    code1 = codAtsE.code;
     code = code1 || instruction::PUSH(addr1);
   }
-  // TypesMgr::TypeId tid1 = getTypeDecor(ctx->left_expr());
   std::string temp = "%"+codeCounters.newTEMP();
   code = code || instruction::RETURN();
-
   DEBUG_EXIT();
   return code;
-}
-
-// std::any CodeGenVisitor::visitLeft_expr(AslParser::Left_exprContext *ctx) {
-//   DEBUG_ENTER();
-//   CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->ident()));
-//   DEBUG_EXIT();
-//   return codAts;
-// }
-
-std::any CodeGenVisitor::visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx) {
-  DEBUG_ENTER();
-  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->children[0]));
-  DEBUG_EXIT();
-  return codAts;
-}
-
-std::any CodeGenVisitor::visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx) {
-  DEBUG_ENTER();
-  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->children[0]));
-  DEBUG_EXIT();
-  return codAts;
 }
 
 std::any CodeGenVisitor::visitParenthesis(AslParser::ParenthesisContext *ctx) {
@@ -479,6 +474,13 @@ std::any CodeGenVisitor::visitCharVal(AslParser::CharValContext *ctx) {
   return codAts;
 }
 
+std::any CodeGenVisitor::visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx) {
+  DEBUG_ENTER();
+  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->children[0]));
+  DEBUG_EXIT();
+  return codAts;
+}
+
 std::any CodeGenVisitor::visitExprIdent(AslParser::ExprIdentContext *ctx) {
   DEBUG_ENTER();
   CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->ident()));
@@ -493,6 +495,46 @@ std::any CodeGenVisitor::visitIdent(AslParser::IdentContext *ctx) {
   return codAts;
 }
 
+std::any CodeGenVisitor::visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx) {
+  DEBUG_ENTER();
+  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->array()));
+  DEBUG_EXIT();
+  return codAts; 
+}
+
+std::any CodeGenVisitor::visitArrayAccessExpr(AslParser::ArrayAccessExprContext *ctx) {
+  DEBUG_ENTER();
+  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->array()));
+  std::string addrArray = codAts.addr;
+  std::string addrIndex = codAts.offs;
+  instructionList code = codAts.code;
+  std::string temp = "%" + codeCounters.newTEMP();
+  code = code || instruction::LOADX(temp, addrArray, addrIndex);
+
+  CodeAttribs codAtsResult(temp, "", code);
+  DEBUG_EXIT();
+  return codAtsResult;
+}
+
+std::any CodeGenVisitor::visitArray(AslParser::ArrayContext *ctx) {
+  DEBUG_ENTER();
+  instructionList code;
+
+  CodeAttribs && codAtsIdent = std::any_cast<CodeAttribs>(visit(ctx->ident()));
+  std::string       addrIdent = codAtsIdent.addr;
+  instructionList & codeIdent = codAtsIdent.code;
+
+  CodeAttribs && codAtsExpr = std::any_cast<CodeAttribs>(visit(ctx->expr()));
+  std::string       addrExpr = codAtsExpr.addr;
+  instructionList & codeExpr = codAtsExpr.code;
+
+  code = codeIdent || codeExpr;
+
+  // Retornem només addr=nom_array, offs=index
+  CodeAttribs codAts(addrIdent, addrExpr, code);
+  DEBUG_EXIT();
+  return codAts;
+}
 
 // Getters for the necessary tree node atributes:
 //   Scope and Type
