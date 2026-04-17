@@ -85,12 +85,22 @@ std::any CodeGenVisitor::visitFunction(AslParser::FunctionContext *ctx) {
   Symbols.pushThisScope(sc);
   subroutine subr(ctx->ID()->getText());
   codeCounters.reset();
+  if (ctx->params()) {
+    for (std::size_t i = 0; i < ctx->params()->ID().size(); ++i) {
+      std::string name = ctx->params()->ID(i)->getText();
+      TypesMgr::TypeId   tParam = getTypeDecor(ctx->params()->type(i));
+      bool isArray = Types.isArrayTy(tParam);
+      subr.add_param(name, Types.to_string(tParam), isArray);
+    }
+  }
+
   std::vector<var> && lvars = std::any_cast<std::vector<var>>(visit(ctx->declarations()));
   for (auto & onevar : lvars) {
     subr.add_var(onevar);
   }
   instructionList && code = std::any_cast<instructionList>(visit(ctx->statements()));
-  code = code || instruction(instruction::RETURN());
+  // Sempre afegim un push perque sempre fem un pop
+  code = code || instruction::PUSH() || instruction(instruction::RETURN());
   subr.set_instructions(code);
   Symbols.popScope();
   DEBUG_EXIT();
@@ -192,12 +202,41 @@ std::any CodeGenVisitor::visitWhileStmt(AslParser::WhileStmtContext *ctx){
 
 std::any CodeGenVisitor::visitFunctionCallStmt(AslParser::FunctionCallStmtContext *ctx){
   DEBUG_ENTER();
-  instructionList code;
-  // std::string name = ctx->ident()->ID()->getSymbol()->getText();
-  std::string name = ctx->functionCall()->ident()->getText();
-  code = instruction::CALL(name);
+  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->functionCall()));
+  instructionList code = codAts.code;
   DEBUG_EXIT();
   return code;
+}
+
+std::any CodeGenVisitor::visitFunctionCallExpr(AslParser::FunctionCallExprContext *ctx) {
+  DEBUG_ENTER();
+  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->functionCall()));
+  DEBUG_EXIT();
+  return codAts;
+}
+
+std::any CodeGenVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx) {
+  DEBUG_ENTER();
+  instructionList code;
+  std::string name = ctx->ident()->getText();
+  for (std::size_t i = 0; i < ctx->expr().size(); ++i) {
+    CodeAttribs     && codAtsE = std::any_cast<CodeAttribs>(visit(ctx->expr(i)));
+    std::string          addr1 = codAtsE.addr;
+    instructionList &    codeExpr = codAtsE.code;
+    code = code || codeExpr || instruction::PUSH(addr1);
+  }
+  code = code || instruction::CALL(name);
+  // Recuperem el return
+  std::string temp = "%"+codeCounters.newTEMP();
+  code = code || instruction::POP(temp); 
+  
+  for (std::size_t i = 0; i < ctx->expr().size(); ++i) {
+    code = code || instruction::POP();
+  }
+  
+  CodeAttribs codAts(temp, "", code);
+  DEBUG_EXIT();
+  return codAts;
 }
 
 std::any CodeGenVisitor::visitReadStmt(AslParser::ReadStmtContext *ctx) {
@@ -233,6 +272,23 @@ std::any CodeGenVisitor::visitWriteString(AslParser::WriteStringContext *ctx) {
   instructionList code;
   std::string s = ctx->STRING()->getText();
   code = code || instruction::WRITES(s);
+  DEBUG_EXIT();
+  return code;
+}
+
+std::any CodeGenVisitor::visitReturn(AslParser::ReturnContext *ctx) {
+  DEBUG_ENTER();
+  instructionList code;
+  if (ctx->expr()) {
+    CodeAttribs     && codAtsE = std::any_cast<CodeAttribs>(visit(ctx->expr()));
+    std::string          addr1 = codAtsE.addr;
+    instructionList &    code1 = codAtsE.code;
+    code = code1 || instruction::PUSH(addr1);
+  }
+  // TypesMgr::TypeId tid1 = getTypeDecor(ctx->left_expr());
+  std::string temp = "%"+codeCounters.newTEMP();
+  code = code || instruction::RETURN();
+
   DEBUG_EXIT();
   return code;
 }
