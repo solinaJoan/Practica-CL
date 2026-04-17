@@ -1,3 +1,8 @@
+P26: tot fet,
+- afegir tipus String
+- afegir operacions amb strings (length, index i in)
+- afegir el tipus map  
+
 P25: tot fet, 
 - afegir tipus any i anycast 
 - fer arrays multidimensionals i slices
