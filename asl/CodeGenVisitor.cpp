@@ -90,7 +90,11 @@ std::any CodeGenVisitor::visitFunction(AslParser::FunctionContext *ctx) {
       std::string name = ctx->params()->ID(i)->getText();
       TypesMgr::TypeId   tParam = getTypeDecor(ctx->params()->type(i));
       bool isArray = Types.isArrayTy(tParam);
-      subr.add_param(name, Types.to_string(tParam), isArray);
+      if (isArray) {
+        subr.add_param(name, Types.to_string(Types.getArrayElemType(tParam)), isArray);
+      } else {
+        subr.add_param(name, Types.to_string(tParam), isArray);
+      }
     }
   }
 
@@ -236,6 +240,7 @@ std::any CodeGenVisitor::visitFunctionCallExpr(AslParser::FunctionCallExprContex
 std::any CodeGenVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx) {
   DEBUG_ENTER();
   instructionList code;
+  instructionList push;
   std::string name = ctx->ident()->getText();
   TypesMgr::TypeId tFunc = getTypeDecor(ctx->ident());
   for (std::size_t i = 0; i < ctx->expr().size(); ++i) {
@@ -244,15 +249,22 @@ std::any CodeGenVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx) 
     instructionList &    codeExpr = codAtsE.code;
     TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr(i));
     TypesMgr::TypeId tParam = Types.getParameterType(tFunc, i);
+
     // Nomes entra a copyable types si tExpr és Integer i tParam és Float
-    if (Types.isFloatTy(tParam) and Types.isIntegerTy(tExpr)) {
+    if (Types.isArrayTy(tParam)) {
+      std::string temp = "%" + codeCounters.newTEMP();
+      code = code || codeExpr || instruction::ALOAD(temp, addr1);
+      push = push || instruction::PUSH(temp);
+    } else if (Types.isFloatTy(tParam) and Types.isIntegerTy(tExpr)) {
       std::string tFloat = "%"+codeCounters.newTEMP();
-      code = code || codeExpr || instruction::FLOAT(tFloat,addr1) || instruction::PUSH(tFloat);
+      code = code || codeExpr || instruction::FLOAT(tFloat,addr1); 
+      push = push || instruction::PUSH(tFloat);
     } else {
-      code = code || codeExpr || instruction::PUSH(addr1);
+      code = code || codeExpr;
+      push = push || instruction::PUSH(addr1);
     }
   }
-  code = code || instruction::CALL(name);
+  code = code || push || instruction::CALL(name);
   // Recuperem el return
   std::string temp = "%"+codeCounters.newTEMP();
   code = code || instruction::POP(temp); 
@@ -270,13 +282,24 @@ std::any CodeGenVisitor::visitReadStmt(AslParser::ReadStmtContext *ctx) {
   DEBUG_ENTER();
   CodeAttribs     && codAtsE = std::any_cast<CodeAttribs>(visit(ctx->left_expr()));
   std::string          addr1 = codAtsE.addr;
-  // std::string          offs1 = codAtsE.offs;
+  std::string          offs1 = codAtsE.offs;
   instructionList &    code1 = codAtsE.code;
   instructionList &     code = code1;
   TypesMgr::TypeId tid1 = getTypeDecor(ctx->left_expr());
-  if (Types.isIntegerTy(tid1) or Types.isBooleanTy(tid1)) code = code1 || instruction::READI(addr1);
-  else if (Types.isFloatTy(tid1)) code = code1 || instruction::READF(addr1);
-  else if (Types.isCharacterTy(tid1)) code = code1 || instruction::READC(addr1);
+  if (offs1 != "") {
+    std::string temp = "%" + codeCounters.newTEMP();
+    if (Types.isIntegerTy(tid1) or Types.isBooleanTy(tid1)) {
+      code = code1 || instruction::READI(temp) || instruction::XLOAD(addr1, offs1, temp);
+    } else if (Types.isFloatTy(tid1)) {
+      code = code1 || instruction::READF(temp) || instruction::XLOAD(addr1, offs1, temp);
+    } else if (Types.isCharacterTy(tid1)) {
+      code = code1 || instruction::READC(temp) || instruction::XLOAD(addr1, offs1, temp);
+    }
+  } else {
+    if (Types.isIntegerTy(tid1) or Types.isBooleanTy(tid1)) code = code1 || instruction::READI(addr1);
+    else if (Types.isFloatTy(tid1)) code = code1 || instruction::READF(addr1);
+    else if (Types.isCharacterTy(tid1)) code = code1 || instruction::READC(addr1);
+  }
   DEBUG_EXIT();
   return code;
 }
@@ -567,6 +590,13 @@ std::any CodeGenVisitor::visitArray(AslParser::ArrayContext *ctx) {
   instructionList & codeExpr = codAtsExpr.code;
 
   code = codeIdent || codeExpr;
+
+  TypesMgr::TypeId tIdent = getTypeDecor(ctx->ident());
+  if (Types.isArrayTy(tIdent) and Symbols.isParameterClass(addrIdent)) {
+    std::string ptr  = "%" + codeCounters.newTEMP();
+    code = code || instruction::LOAD(ptr, addrIdent);   
+    addrIdent = ptr;
+  }
 
   // Retornem només addr=nom_array, offs=index
   CodeAttribs codAts(addrIdent, addrExpr, code);
