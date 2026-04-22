@@ -314,7 +314,7 @@ std::any CodeGenVisitor::visitWriteExpr(AslParser::WriteExprContext *ctx) {
   TypesMgr::TypeId tid1 = getTypeDecor(ctx->expr());
   if (Types.isIntegerTy(tid1) or Types.isBooleanTy(tid1)) code = code1 || instruction::WRITEI(addr1);
   else if (Types.isFloatTy(tid1)) code = code1 || instruction::WRITEF(addr1);
-  else if (Types.isCharacterTy(tid1)) code = code1 || instruction::WRITEC(addr1);
+  else if (Types.isCharacterTy(tid1)) code = code1 || instruction::WRITEC(addr1); // || instruction::WRITELN();
   DEBUG_EXIT();
   return code;
 }
@@ -414,9 +414,7 @@ std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
       code = code || instruction::FDIV(temp, addr1_f, addr2_f);
     } else if (ctx->MINUS()) {
       code = code || instruction::FSUB(temp, addr1_f, addr2_f);
-    } else if (ctx->MOD()) {
-      // Todo
-    }
+    } 
   } else {
     if (ctx->MUL()) {
       code = code || instruction::MUL(temp, addr1, addr2);
@@ -427,7 +425,9 @@ std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
     } else if (ctx->MINUS()) {
       code = code || instruction::SUB(temp, addr1, addr2);
     } else if (ctx->MOD()) {
-      // Todo
+      // x%y
+      //                temp = x/y                                   temp = y*temp                    temp = x-temp
+      code = code || instruction::DIV(temp, addr1, addr2) || instruction::MUL(temp, addr2, temp) || instruction::SUB(temp,addr1,temp);
     }
   }
   CodeAttribs codAts(temp, "", code);
@@ -529,7 +529,9 @@ std::any CodeGenVisitor::visitCharVal(AslParser::CharValContext *ctx) {
   DEBUG_ENTER();
   instructionList code;
   std::string temp = "%"+codeCounters.newTEMP();
-  code = instruction::CHLOAD(temp, ctx->getText());
+  std::string text = ctx->CHARVAL()->getText();
+  std::string strVal = text.substr(1, text.size() - 2);
+  code = instruction::CHLOAD(temp, strVal);
   CodeAttribs codAts(temp, "", code);
   DEBUG_EXIT();
   return codAts;
