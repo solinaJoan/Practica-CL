@@ -167,18 +167,23 @@ std::any CodeGenVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx) {
   std::string           addr1 = codAtsE1.addr;
   std::string           offs1 = codAtsE1.offs;
   instructionList &     code1 = codAtsE1.code;
-  // TypesMgr::TypeId tid1 = getTypeDecor(ctx->left_expr());
+  TypesMgr::TypeId tid1 = getTypeDecor(ctx->left_expr());
   CodeAttribs     && codAtsE2 = std::any_cast<CodeAttribs>(visit(ctx->expr()));
   std::string           addr2 = codAtsE2.addr;
   // std::string           offs2 = codAtsE2.offs;
   instructionList &     code2 = codAtsE2.code;
-  // TypesMgr::TypeId tid2 = getTypeDecor(ctx->expr());
+  TypesMgr::TypeId tid2 = getTypeDecor(ctx->expr());
   // Si l'offset és diferent a nul, vol dir que teniem una array. Provar si així tambe funcionaria
   //  if (dynamic_cast<AslParser::ArrayLeftExprContext*>(ctx->left_expr())) {
   if (offs1 != "") {
     code = code1 || code2 || instruction::XLOAD(addr1, offs1, addr2);
   } else {
-    code = code1 || code2 || instruction::LOAD(addr1, addr2);
+    code = code1 || code2;
+    // Hem de fer la conversio de int a float
+    if (Types.isFloatTy(tid1) and Types.isIntegerTy(tid2)) {
+      code = code || instruction::FLOAT(addr2, addr2);
+    } 
+    code = code || instruction::LOAD(addr1, addr2);
   }
   DEBUG_EXIT();
   return code;
