@@ -85,6 +85,15 @@ std::any CodeGenVisitor::visitFunction(AslParser::FunctionContext *ctx) {
   Symbols.pushThisScope(sc);
   subroutine subr(ctx->ID()->getText());
   codeCounters.reset();
+  // Parametre de retorn
+  if (ctx->ID()->getText() != "main") {
+      TypesMgr::TypeId tRet = ctx->type() ? getTypeDecor(ctx->type()) : Types.createVoidTy();
+      bool isVoid = Types.isVoidTy(tRet);
+      if (!isVoid) {
+        subr.add_param("_retval", Types.to_string(tRet), false);
+      }
+  }
+  // Parametres de la funcio
   if (ctx->params()) {
     for (std::size_t i = 0; i < ctx->params()->ID().size(); ++i) {
       std::string name = ctx->params()->ID(i)->getText();
@@ -97,14 +106,12 @@ std::any CodeGenVisitor::visitFunction(AslParser::FunctionContext *ctx) {
       }
     }
   }
-
+  // Visitem les declaracions i els statements
   std::vector<var> && lvars = std::any_cast<std::vector<var>>(visit(ctx->declarations()));
-  for (auto & onevar : lvars) {
-    subr.add_var(onevar);
-  }
+  for (auto & onevar : lvars) subr.add_var(onevar);
   instructionList && code = std::any_cast<instructionList>(visit(ctx->statements()));
-  // Sempre afegim un push perque sempre fem un pop
-  code = code || instruction::PUSH() || instruction(instruction::RETURN());
+  // Retorn al final per defecte
+  code = code || instruction::RETURN();
   subr.set_instructions(code);
   Symbols.popScope();
   DEBUG_EXIT();
@@ -134,7 +141,6 @@ std::any CodeGenVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx
       TypesMgr::TypeId tElem = Types.getArrayElemType(t1);
       std::size_t      sizeElems = Types.getSizeOfType(tElem);
       std::size_t      size = Types.getArraySize(t1)*sizeElems;
-      // std::cout << "Mida elements: " << sizeElems << " Mida array: " << Types.getArraySize(t1) << " Mida final: " << size << std::endl; 
       var onevar = var{varID->getText(), Types.to_string(Types.getArrayElemType(t1)), size};
       lvars.push_back(onevar);
     }
@@ -248,36 +254,35 @@ std::any CodeGenVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx) 
   instructionList push;
   std::string name = ctx->ident()->getText();
   TypesMgr::TypeId tFunc = getTypeDecor(ctx->ident());
+
+  // Fem un push per reservar el retorn de la funcio
+  push = instruction::PUSH();  
   for (std::size_t i = 0; i < ctx->expr().size(); ++i) {
+    std::string temp = "%" + codeCounters.newTEMP();
     CodeAttribs     && codAtsE = std::any_cast<CodeAttribs>(visit(ctx->expr(i)));
     std::string          addr1 = codAtsE.addr;
     instructionList &    codeExpr = codAtsE.code;
     TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr(i));
     TypesMgr::TypeId tParam = Types.getParameterType(tFunc, i);
-
-    // Nomes entra a copyable types si tExpr és Integer i tParam és Float
+    code = code || codeExpr;
+    // Fem push de l'adreça si es array, mirem si hem de fer una conversio int-float 
     if (Types.isArrayTy(tParam)) {
-      std::string temp = "%" + codeCounters.newTEMP();
-      code = code || codeExpr || instruction::ALOAD(temp, addr1);
-      push = push || instruction::PUSH(temp);
+      code = code || instruction::ALOAD(temp, addr1);
     } else if (Types.isFloatTy(tParam) and Types.isIntegerTy(tExpr)) {
-      std::string tFloat = "%"+codeCounters.newTEMP();
-      code = code || codeExpr || instruction::FLOAT(tFloat,addr1); 
-      push = push || instruction::PUSH(tFloat);
+      code = code || instruction::FLOAT(temp, addr1); 
     } else {
-      code = code || codeExpr;
-      push = push || instruction::PUSH(addr1);
-    }
+      temp = addr1;
+    } 
+    push = push || instruction::PUSH(temp);
   }
   code = code || push || instruction::CALL(name);
-  // Recuperem el return
-  std::string temp = "%"+codeCounters.newTEMP();
-  code = code || instruction::POP(temp); 
-  
+  // Desapilem els parametres reals
   for (std::size_t i = 0; i < ctx->expr().size(); ++i) {
     code = code || instruction::POP();
   }
-  
+  // Recuperem el valor de retorn
+  std::string temp = "%"+codeCounters.newTEMP();
+  code = code || instruction::POP(temp);
   CodeAttribs codAts(temp, "", code);
   DEBUG_EXIT();
   return codAts;
@@ -337,12 +342,12 @@ std::any CodeGenVisitor::visitReturn(AslParser::ReturnContext *ctx) {
   DEBUG_ENTER();
   instructionList code;
   if (ctx->expr()) {
-    CodeAttribs     && codAtsE = std::any_cast<CodeAttribs>(visit(ctx->expr()));
-    std::string          addr1 = codAtsE.addr;
-    instructionList &    code1 = codAtsE.code;
-    code = code1 || instruction::PUSH(addr1);
+    CodeAttribs && codAtsE = std::any_cast<CodeAttribs>(visit(ctx->expr()));
+    std::string   addr1 = codAtsE.addr;
+    instructionList & code1 = codAtsE.code;
+    // Escrivim el valor de l'expressio al parametre reservat per el retorn
+    code = code1 || instruction::LOAD("_retval", addr1);
   }
-  std::string temp = "%"+codeCounters.newTEMP();
   code = code || instruction::RETURN();
   DEBUG_EXIT();
   return code;
