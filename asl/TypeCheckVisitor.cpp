@@ -151,7 +151,7 @@ std::any TypeCheckVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx)
     }
 
     if ((not Types.isErrorTy(tLeft)) and (not getIsLValueDecor(ctx->left_expr()))) {
-            Errors.nonReferenceableLeftExpr(ctx->left_expr());
+        Errors.nonReferenceableLeftExpr(ctx->left_expr());
     }
     DEBUG_EXIT();
     return 0;
