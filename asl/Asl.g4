@@ -87,7 +87,7 @@ left_expr
 expr    : '(' expr ')'                                   # parenthesis
         | functionCall                                   # functionCallExpr
         | array                                          # arrayAccessExpr
-        | op=MINUS expr                                  # unary
+        | op=(PLUS|MINUS) expr                           # unary
         | op=NOT expr                                    # not
         | expr op=(MUL|DIV|MOD) expr                     # arithmetic
         | expr op=(PLUS|MINUS) expr                      # arithmetic

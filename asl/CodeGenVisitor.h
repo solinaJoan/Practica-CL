@@ -87,6 +87,7 @@ public:
   std::any visitNot(AslParser::NotContext *ctx);
   std::any visitArithmetic(AslParser::ArithmeticContext *ctx);
   std::any visitRelational(AslParser::RelationalContext *ctx);
+  std::any visitLogic(AslParser::LogicContext *ctx);
   std::any visitIntVal(AslParser::IntValContext *ctx);
   std::any visitFloatVal(AslParser::FloatValContext *ctx);
   std::any visitBoolVal(AslParser::BoolValContext *ctx);
