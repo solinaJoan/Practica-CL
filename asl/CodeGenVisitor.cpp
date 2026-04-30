@@ -90,7 +90,7 @@ std::any CodeGenVisitor::visitFunction(AslParser::FunctionContext *ctx) {
       TypesMgr::TypeId tRet = ctx->type() ? getTypeDecor(ctx->type()) : Types.createVoidTy();
       bool isVoid = Types.isVoidTy(tRet);
       if (!isVoid) {
-        subr.add_param("_retval", Types.to_string(tRet), false);
+        subr.add_param("_result", Types.to_string(tRet), false);
       }
   }
   // Parametres de la funcio
@@ -179,17 +179,30 @@ std::any CodeGenVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx) {
   // std::string           offs2 = codAtsE2.offs;
   instructionList &     code2 = codAtsE2.code;
   TypesMgr::TypeId tid2 = getTypeDecor(ctx->expr());
-  // Si l'offset és diferent a nul, vol dir que teniem una array. Provar si així tambe funcionaria
-  //  if (dynamic_cast<AslParser::ArrayLeftExprContext*>(ctx->left_expr())) {
+  code = code1 || code2;
   if (offs1 != "") {
-    code = code1 || code2 || instruction::XLOAD(addr1, offs1, addr2);
+    code = code || instruction::XLOAD(addr1, offs1, addr2);
   } else {
-    code = code1 || code2;
     // Hem de fer la conversio de int a float
     if (Types.isFloatTy(tid1) and Types.isIntegerTy(tid2)) {
       code = code || instruction::FLOAT(addr2, addr2);
     } 
-    code = code || instruction::LOAD(addr1, addr2);
+    // Quan son dos arrays, assignem totes les variables de l'array
+    if (Types.isArrayTy(tid1) and Types.isArrayTy(tid2)) {
+      size_t size = Types.getArraySize(tid1);
+      for (size_t i = 0; i < size; ++i) {
+        std::string tempIdx = "%" + codeCounters.newTEMP();
+        std::string tempVal = "%" + codeCounters.newTEMP();
+        // Carreguem index a un temporal
+        code = code || instruction::ILOAD(tempIdx, std::to_string(i));
+        // Carreguem a un temporal el valor
+        code = code || instruction::LOADX(tempVal, addr2, tempIdx);
+        // Emmagatzemem al destí: addr1[i] = tempVal
+        code = code || instruction::XLOAD(addr1, tempIdx, tempVal);
+      }
+    } else {
+      code = code || instruction::LOAD(addr1, addr2);
+    }
   }
   DEBUG_EXIT();
   return code;
@@ -346,7 +359,7 @@ std::any CodeGenVisitor::visitReturn(AslParser::ReturnContext *ctx) {
     std::string   addr1 = codAtsE.addr;
     instructionList & code1 = codAtsE.code;
     // Escrivim el valor de l'expressio al parametre reservat per el retorn
-    code = code1 || instruction::LOAD("_retval", addr1);
+    code = code1 || instruction::LOAD("_result", addr1);
   }
   code = code || instruction::RETURN();
   DEBUG_EXIT();
