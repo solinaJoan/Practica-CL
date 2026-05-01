@@ -280,8 +280,13 @@ std::any CodeGenVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx) 
     code = code || codeExpr;
     // Fem push de l'adreça si es array, mirem si hem de fer una conversio int-float 
     if (Types.isArrayTy(tParam)) {
-      // Aquest adress load nomes el podem fer de variables, si es d'un parametre falla
-      code = code || instruction::ALOAD(temp, addr1);
+      if (not Symbols.findInCurrentScope(addr1)) {
+        // Es un temporal 
+        temp = addr1;
+      } else {
+        // Es un array i per passar-la per referencia carreguem la seva adreça
+        code = code || instruction::ALOAD(temp, addr1);
+      }
     } else if (Types.isFloatTy(tParam) and Types.isIntegerTy(tExpr)) {
       code = code || instruction::FLOAT(temp, addr1); 
     } else {
@@ -608,9 +613,9 @@ std::any CodeGenVisitor::visitIdent(AslParser::IdentContext *ctx) {
   instructionList code;
   TypesMgr::TypeId tIdent = getTypeDecor(ctx);
   if (Types.isArrayTy(tIdent) and Symbols.isParameterClass(addrIdent)) {
-    std::string ptr  = "%" + codeCounters.newTEMP();
-    code = instruction::LOAD(ptr, addrIdent);   
-    addrIdent = ptr;
+    std::string temp  = "%" + codeCounters.newTEMP();
+    code = instruction::LOAD(temp, addrIdent);   
+    addrIdent = temp;
   }
   CodeAttribs codAts(addrIdent, "", code);
   DEBUG_EXIT();
