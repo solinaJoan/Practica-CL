@@ -39,7 +39,6 @@
 
 // using namespace std;
 
-
 //////////////////////////////////////////////////////////////////////
 // Class TypeCheckVisitor: derived from AslBaseVisitor.
 // The tree visitor go through the parser tree and call the methods of
@@ -49,81 +48,80 @@
 // if some node/method does not have an associated task, it does not
 // have to be visited/called so no redefinition is needed.
 
-class TypeCheckVisitor final : public AslBaseVisitor {
+class TypeCheckVisitor final : public AslBaseVisitor
+{
 
 public:
+    // Constructor
+    TypeCheckVisitor(TypesMgr &Types,
+                     SymTable &Symbols,
+                     TreeDecoration &Decorations,
+                     SemErrors &Errors);
 
-  // Constructor
-  TypeCheckVisitor(TypesMgr       & Types,
-                   SymTable       & Symbols,
-                   TreeDecoration & Decorations,
-                   SemErrors      & Errors);
-
-  // Methods to visit each kind of node.
-  // Non visited nodes have been commented out:
-  std::any visitProgram(AslParser::ProgramContext *ctx);
-  std::any visitFunction(AslParser::FunctionContext *ctx);
-  // std::any visitDeclarations(AslParser::DeclarationsContext *ctx);
-  // std::any visitVariable_decl(AslParser::Variable_declContext *ctx);
-  // std::any visitType(AslParser::TypeContext *ctx);
-  // std::any visitStatements(AslParser::StatementsContext *ctx);
-  std::any visitAssignStmt(AslParser::AssignStmtContext *ctx);
-  std::any visitIfStmt(AslParser::IfStmtContext *ctx);
-  std::any visitWhileStmt(AslParser::WhileStmtContext *ctx);
-  std::any visitReadStmt(AslParser::ReadStmtContext *ctx);
-  std::any visitWriteExpr(AslParser::WriteExprContext *ctx);
-  std::any visitReturn(AslParser::ReturnContext *ctx);
-  // std::any visitWriteString(AslParser::WriteStringContext *ctx);
-  // std::any visitLeft_expr(AslParser::Left_exprContext *ctx);
-  std::any visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx);
-  std::any visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx);
-  std::any visitParenthesis(AslParser::ParenthesisContext *ctx);
-  std::any visitFunctionCallExpr(AslParser::FunctionCallExprContext *ctx);
-  std::any visitFunctionCall(AslParser::FunctionCallContext *ctx);
-  std::any visitUnary(AslParser::UnaryContext *ctx);
-  std::any visitArithmetic(AslParser::ArithmeticContext *ctx);
-  std::any visitRelational(AslParser::RelationalContext *ctx);
-  std::any visitNot(AslParser::NotContext *ctx);
-  std::any visitLogic(AslParser::LogicContext *ctx);
-  std::any visitIntVal(AslParser::IntValContext *ctx);
-  std::any visitFloatVal(AslParser::FloatValContext *ctx);
-  std::any visitBoolVal(AslParser::BoolValContext *ctx);
-  std::any visitCharVal(AslParser::CharValContext *ctx);
-  std::any visitExprIdent(AslParser::ExprIdentContext *ctx);
-  std::any visitArrayAccess(AslParser::ArrayAccessContext *ctx);
-  std::any visitArray(AslParser::ArrayContext *ctx);
-  std::any visitIdent(AslParser::IdentContext *ctx);
+    // Methods to visit each kind of node.
+    // Non visited nodes have been commented out:
+    std::any visitProgram(AslParser::ProgramContext *ctx);
+    std::any visitFunction(AslParser::FunctionContext *ctx);
+    // std::any visitDeclarations(AslParser::DeclarationsContext *ctx);
+    // std::any visitVariable_decl(AslParser::Variable_declContext *ctx);
+    // std::any visitType(AslParser::TypeContext *ctx);
+    // std::any visitStatements(AslParser::StatementsContext *ctx);
+    std::any visitAssignStmt(AslParser::AssignStmtContext *ctx);
+    std::any visitIfStmt(AslParser::IfStmtContext *ctx);
+    std::any visitWhileStmt(AslParser::WhileStmtContext *ctx);
+    std::any visitReadStmt(AslParser::ReadStmtContext *ctx);
+    std::any visitWriteExpr(AslParser::WriteExprContext *ctx);
+    std::any visitReturn(AslParser::ReturnContext *ctx);
+    // std::any visitWriteString(AslParser::WriteStringContext *ctx);
+    // std::any visitLeft_expr(AslParser::Left_exprContext *ctx);
+    std::any visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx);
+    std::any visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx);
+    std::any visitParenthesis(AslParser::ParenthesisContext *ctx);
+    std::any visitFunctionCallExpr(AslParser::FunctionCallExprContext *ctx);
+    std::any visitFunctionCall(AslParser::FunctionCallContext *ctx);
+    std::any visitUnary(AslParser::UnaryContext *ctx);
+    std::any visitArithmetic(AslParser::ArithmeticContext *ctx);
+    std::any visitRelational(AslParser::RelationalContext *ctx);
+    std::any visitNot(AslParser::NotContext *ctx);
+    std::any visitLogic(AslParser::LogicContext *ctx);
+    std::any visitIntVal(AslParser::IntValContext *ctx);
+    std::any visitFloatVal(AslParser::FloatValContext *ctx);
+    std::any visitBoolVal(AslParser::BoolValContext *ctx);
+    std::any visitCharVal(AslParser::CharValContext *ctx);
+    std::any visitExprIdent(AslParser::ExprIdentContext *ctx);
+    std::any visitArrayAccess(AslParser::ArrayAccessContext *ctx);
+    std::any visitArray(AslParser::ArrayContext *ctx);
+    std::any visitIdent(AslParser::IdentContext *ctx);
 
 private:
+    // Attributes
+    TypesMgr &Types;
+    SymTable &Symbols;
+    TreeDecoration &Decorations;
+    SemErrors &Errors;
+    // Current function type (assigned before visit its instructions)
+    TypesMgr::TypeId currFunctionType;
 
-  // Attributes
-  TypesMgr       & Types;
-  SymTable       & Symbols;
-  TreeDecoration & Decorations;
-  SemErrors      & Errors;
-  // Current function type (assigned before visit its instructions)
-  TypesMgr::TypeId currFunctionType;
+    // Accessor/Mutator to the type (TypeId) of the current function
+    TypesMgr::TypeId getCurrentFunctionTy() const;
+    void setCurrentFunctionTy(TypesMgr::TypeId type);
 
-  // Accessor/Mutator to the type (TypeId) of the current function
-  TypesMgr::TypeId getCurrentFunctionTy ()                      const;
-  void             setCurrentFunctionTy (TypesMgr::TypeId type);
-
-  // Getters for the necessary tree node atributes:
-  //   Scope, Type ans IsLValue
-  SymTable::ScopeId getScopeDecor    (antlr4::ParserRuleContext *ctx);
-  TypesMgr::TypeId  getTypeDecor     (antlr4::ParserRuleContext *ctx);
-  bool              getIsLValueDecor (antlr4::ParserRuleContext *ctx);
+    // Getters for the necessary tree node atributes:
+    //   Scope, Type ans IsLValue
+    SymTable::ScopeId getScopeDecor(antlr4::ParserRuleContext *ctx);
+    TypesMgr::TypeId getTypeDecor(antlr4::ParserRuleContext *ctx);
+    bool getIsLValueDecor(antlr4::ParserRuleContext *ctx);
 
     // Auxiliary methods to check the properties of types
-  bool allPrimitiveType(const std::vector<TypesMgr::TypeId> & types) const;
-  bool allSameType     (const std::vector<TypesMgr::TypeId> & types) const;
-  bool allNumericType  (const std::vector<TypesMgr::TypeId> & types) const;
-  TypesMgr::TypeId getTypeCoercion (const std::vector<TypesMgr::TypeId> &types) const;
+    bool allPrimitiveType(const std::vector<TypesMgr::TypeId> &types) const;
+    bool allSameType(const std::vector<TypesMgr::TypeId> &types) const;
+    bool allNumericType(const std::vector<TypesMgr::TypeId> &types) const;
+    TypesMgr::TypeId getTypeCoercion(const std::vector<TypesMgr::TypeId> &types) const;
 
-  // Setters for the necessary tree node attributes:
-  //   Scope, Type ans IsLValue
-  void putScopeDecor    (antlr4::ParserRuleContext *ctx, SymTable::ScopeId s);
-  void putTypeDecor     (antlr4::ParserRuleContext *ctx, TypesMgr::TypeId t);
-  void putIsLValueDecor (antlr4::ParserRuleContext *ctx, bool b);
+    // Setters for the necessary tree node attributes:
+    //   Scope, Type ans IsLValue
+    void putScopeDecor(antlr4::ParserRuleContext *ctx, SymTable::ScopeId s);
+    void putTypeDecor(antlr4::ParserRuleContext *ctx, TypesMgr::TypeId t);
+    void putIsLValueDecor(antlr4::ParserRuleContext *ctx, bool b);
 
-};  // class TypeCheckVisitor
+}; // class TypeCheckVisitor

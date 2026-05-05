@@ -141,17 +141,20 @@ std::any TypeCheckVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx)
     TypesMgr::TypeId tLeft = getTypeDecor(ctx->left_expr());
     TypesMgr::TypeId tRight = getTypeDecor(ctx->expr());
 
-    if (Types.isVoidTy(tRight)) {
+    if (Types.isVoidTy(tRight))
+    {
         Errors.isNotFunction(ctx->expr());
-    } 
+    }
     // Si no son compatibles i no son errors (tractant els arrays correctament), error
     else if (not Types.isErrorTy(tLeft) and not Types.isErrorTy(tRight) and
-             not Types.copyableTypes(tLeft, tRight)) { 
+             not Types.copyableTypes(tLeft, tRight))
+    {
         Errors.incompatibleAssignment(ctx->ASSIGN());
     }
 
-    if ((not Types.isErrorTy(tLeft)) and (not getIsLValueDecor(ctx->left_expr()))) {
-            Errors.nonReferenceableLeftExpr(ctx->left_expr());
+    if ((not Types.isErrorTy(tLeft)) and (not getIsLValueDecor(ctx->left_expr())))
+    {
+        Errors.nonReferenceableLeftExpr(ctx->left_expr());
     }
     DEBUG_EXIT();
     return 0;
@@ -184,12 +187,12 @@ std::any TypeCheckVisitor::visitWhileStmt(AslParser::WhileStmtContext *ctx)
 }
 
 std::any TypeCheckVisitor::visitFunctionCallExpr(AslParser::FunctionCallExprContext *ctx)
-{   
+{
     DEBUG_ENTER();
     visit(ctx->functionCall());
     TypesMgr::TypeId t = getTypeDecor(ctx->functionCall());
-    putTypeDecor(ctx,t);
-    putIsLValueDecor(ctx,false);
+    putTypeDecor(ctx, t);
+    putIsLValueDecor(ctx, false);
     DEBUG_EXIT();
     return 0;
 }
@@ -230,13 +233,16 @@ std::any TypeCheckVisitor::visitReturn(AslParser::ReturnContext *ctx)
 {
     DEBUG_ENTER();
     TypesMgr::TypeId t1 = getCurrentFunctionTy();
-    if (ctx->expr()) {
+    if (ctx->expr())
+    {
         visit(ctx->expr());
         TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
         // Hem de comprovar que sigui del mateix tipus que la funció
         if (not Types.isErrorTy(t1) and not Types.isErrorTy(t2) and not Types.copyableTypes(t1, t2))
             Errors.incompatibleReturn(ctx->RETURN());
-    } else {
+    }
+    else
+    {
         // Si no hi ha expressió i no es void, també donem error
         if (not Types.isErrorTy(t1) and not Types.isVoidTy(t1))
             Errors.incompatibleReturn(ctx->RETURN());
@@ -245,7 +251,8 @@ std::any TypeCheckVisitor::visitReturn(AslParser::ReturnContext *ctx)
     return 0;
 }
 
-std::any TypeCheckVisitor::visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx) {
+std::any TypeCheckVisitor::visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx)
+{
     DEBUG_ENTER();
     visit(ctx->array());
     TypesMgr::TypeId t1 = getTypeDecor(ctx->array());
@@ -255,7 +262,8 @@ std::any TypeCheckVisitor::visitArrayLeftExpr(AslParser::ArrayLeftExprContext *c
     return 0;
 }
 
-std::any TypeCheckVisitor::visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx) {
+std::any TypeCheckVisitor::visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx)
+{
     DEBUG_ENTER();
     visit(ctx->ident());
     TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
@@ -284,10 +292,14 @@ std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx
     TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
 
     // Si no es funció error
-    if (not Types.isErrorTy(t1)) {
-        if (not Types.isFunctionTy(t1)) {
+    if (not Types.isErrorTy(t1))
+    {
+        if (not Types.isFunctionTy(t1))
+        {
             Errors.isNotCallable(ctx->ident());
-        } else {
+        }
+        else
+        {
             TypesMgr::TypeId tRet = Types.getFuncReturnType(t1);
             putTypeDecor(ctx, tRet);
             putIsLValueDecor(ctx, false);
@@ -297,19 +309,24 @@ std::any TypeCheckVisitor::visitFunctionCall(AslParser::FunctionCallContext *ctx
     // Si no tenen la mateixa quantitat de paràmetres, error
     std::size_t nParamsFunction = Types.isFunctionTy(t1) ? Types.getNumOfParameters(t1) : 0;
     std::size_t nParamsCall = ctx->expr().size();
-    if (Types.isFunctionTy(t1) and nParamsFunction != nParamsCall) {
+    if (Types.isFunctionTy(t1) and nParamsFunction != nParamsCall)
+    {
         Errors.numberOfParameters(ctx->ident());
     }
 
     // I visitem igualment els paràmetres
-    if (ctx->expr().size()) {
-        for (std::size_t i = 0; i < nParamsCall; ++i) {
+    if (ctx->expr().size())
+    {
+        for (std::size_t i = 0; i < nParamsCall; ++i)
+        {
             visit(ctx->expr(i));
-            if (i < nParamsFunction) {
+            if (i < nParamsFunction)
+            {
                 TypesMgr::TypeId tParamFunction = getTypeDecor(ctx->expr(i));
                 TypesMgr::TypeId tParamCall = Types.getParameterType(t1, i);
-                
-                if (not Types.isErrorTy(tParamFunction) and not Types.copyableTypes(tParamCall, tParamFunction)){
+
+                if (not Types.isErrorTy(tParamFunction) and not Types.copyableTypes(tParamCall, tParamFunction))
+                {
                     Errors.incompatibleParameter(ctx->expr(i), i + 1, ctx->ident());
                 }
             }
@@ -324,9 +341,12 @@ std::any TypeCheckVisitor::visitUnary(AslParser::UnaryContext *ctx)
     DEBUG_ENTER();
     visit(ctx->expr());
     TypesMgr::TypeId t = getTypeDecor(ctx->expr());
-    if ((not Types.isErrorTy(t)) and (not Types.isNumericTy(t))) {
+    if ((not Types.isErrorTy(t)) and (not Types.isNumericTy(t)))
+    {
         Errors.incompatibleOperator(ctx->op);
-    } else {
+    }
+    else
+    {
         putTypeDecor(ctx, t);
         putIsLValueDecor(ctx, false);
     }
@@ -343,23 +363,30 @@ std::any TypeCheckVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx)
     TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
 
     TypesMgr::TypeId tRes;
-    if (ctx->op->getText() == "%") {
+    if (ctx->op->getText() == "%")
+    {
         // El mòdul exigeix estrictament enters
         if (((not Types.isErrorTy(t1)) and (not Types.isIntegerTy(t1))) or
-            ((not Types.isErrorTy(t2)) and (not Types.isIntegerTy(t2)))) {
-                Errors.incompatibleOperator(ctx->op);
+            ((not Types.isErrorTy(t2)) and (not Types.isIntegerTy(t2))))
+        {
+            Errors.incompatibleOperator(ctx->op);
         }
         tRes = Types.createIntegerTy();
     }
-    else {
+    else
+    {
         // Multiplicació i divisió permeten qualsevol numèric
         if (((not Types.isErrorTy(t1)) and (not Types.isNumericTy(t1))) or
-            ((not Types.isErrorTy(t2)) and (not Types.isNumericTy(t2)))) {
-                Errors.incompatibleOperator(ctx->op);
+            ((not Types.isErrorTy(t2)) and (not Types.isNumericTy(t2))))
+        {
+            Errors.incompatibleOperator(ctx->op);
         }
-        if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) {
+        if (Types.isFloatTy(t1) or Types.isFloatTy(t2))
+        {
             tRes = Types.createFloatTy();
-        } else {
+        }
+        else
+        {
             tRes = Types.createIntegerTy();
         }
     }
@@ -492,19 +519,23 @@ std::any TypeCheckVisitor::visitArray(AslParser::ArrayContext *ctx)
     visit(ctx->expr());
     TypesMgr::TypeId tArray = getTypeDecor(ctx->ident());
     TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr());
-    
-    if (not Types.isErrorTy(tArray)) {
-        if (not Types.isArrayTy(tArray)) {
+
+    if (not Types.isErrorTy(tArray))
+    {
+        if (not Types.isArrayTy(tArray))
+        {
             Errors.nonArrayInArrayAccess(ctx->ident());
-        } else {
+        }
+        else
+        {
             TypesMgr::TypeId tElemArray = Types.getArrayElemType(tArray);
             putTypeDecor(ctx, tElemArray);
         }
-    } 
-    
+    }
+
     if (not Types.isErrorTy(tExpr) and not Types.isIntegerTy(tExpr))
         Errors.nonIntegerIndexInArrayAccess(ctx->expr());
-    
+
     DEBUG_EXIT();
     return 0;
 }
@@ -514,17 +545,23 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx)
     DEBUG_ENTER();
     std::string ident = ctx->getText();
     // Si no esta declarada, posem un error
-    if (Symbols.findInStack(ident) == -1) {
+    if (Symbols.findInStack(ident) == -1)
+    {
         Errors.undeclaredIdent(ctx->ID());
         TypesMgr::TypeId te = Types.createErrorTy();
         putTypeDecor(ctx, te);
         putIsLValueDecor(ctx, true);
-    } else {
+    }
+    else
+    {
         TypesMgr::TypeId t1 = Symbols.getType(ident);
         putTypeDecor(ctx, t1);
-        if (Symbols.isFunctionClass(ident)) {
+        if (Symbols.isFunctionClass(ident))
+        {
             putIsLValueDecor(ctx, false);
-        } else {
+        }
+        else
+        {
             putIsLValueDecor(ctx, true);
         }
     }
@@ -542,46 +579,59 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx)
 //     return 0;
 // }
 
-
-bool TypeCheckVisitor::allPrimitiveType(const std::vector<TypesMgr::TypeId> & types) const {
-  for (unsigned int i = 0; i < types.size(); ++i) {
-    if (not Types.isErrorTy(types[i]) and not Types.isPrimitiveTy(types[i]))
-      return false;
-  }
-  return true;
-}
-
-bool TypeCheckVisitor::allSameType(const std::vector<TypesMgr::TypeId> & types) const {
-  int firstNonErrorPos = -1;
-  for (unsigned int i = 0; i < types.size(); ++i) {
-    if (not Types.isErrorTy(types[i])) {
-      firstNonErrorPos = i;
-      break;
-    }
-  }
-  if (firstNonErrorPos != -1) {
-    for (unsigned int i = firstNonErrorPos+1; i < types.size(); ++i) {
-      if (not Types.isErrorTy(types[i]) and not Types.equalTypes(types[firstNonErrorPos], types[i]))
-        return false;
+bool TypeCheckVisitor::allPrimitiveType(const std::vector<TypesMgr::TypeId> &types) const
+{
+    for (unsigned int i = 0; i < types.size(); ++i)
+    {
+        if (not Types.isErrorTy(types[i]) and not Types.isPrimitiveTy(types[i]))
+            return false;
     }
     return true;
-  }
-  return true;
 }
 
-bool TypeCheckVisitor::allNumericType(const std::vector<TypesMgr::TypeId> & types) const {
-  for (unsigned int i = 0; i < types.size(); ++i) {
-    if (not Types.isNumericTy(types[i]) and not Types.isErrorTy(types[i]))
-      return false;
-  }
-  return true;
+bool TypeCheckVisitor::allSameType(const std::vector<TypesMgr::TypeId> &types) const
+{
+    int firstNonErrorPos = -1;
+    for (unsigned int i = 0; i < types.size(); ++i)
+    {
+        if (not Types.isErrorTy(types[i]))
+        {
+            firstNonErrorPos = i;
+            break;
+        }
+    }
+    if (firstNonErrorPos != -1)
+    {
+        for (unsigned int i = firstNonErrorPos + 1; i < types.size(); ++i)
+        {
+            if (not Types.isErrorTy(types[i]) and not Types.equalTypes(types[firstNonErrorPos], types[i]))
+                return false;
+        }
+        return true;
+    }
+    return true;
 }
 
-TypesMgr::TypeId TypeCheckVisitor::getTypeCoercion (const std::vector<TypesMgr::TypeId> &types) const {
-    if (allPrimitiveType(types)) {
-        if (allSameType(types)) {
+bool TypeCheckVisitor::allNumericType(const std::vector<TypesMgr::TypeId> &types) const
+{
+    for (unsigned int i = 0; i < types.size(); ++i)
+    {
+        if (not Types.isNumericTy(types[i]) and not Types.isErrorTy(types[i]))
+            return false;
+    }
+    return true;
+}
+
+TypesMgr::TypeId TypeCheckVisitor::getTypeCoercion(const std::vector<TypesMgr::TypeId> &types) const
+{
+    if (allPrimitiveType(types))
+    {
+        if (allSameType(types))
+        {
             return types[0];
-        } else if (allNumericType(types)) {
+        }
+        else if (allNumericType(types))
+        {
             return Types.createFloatTy();
         }
     }

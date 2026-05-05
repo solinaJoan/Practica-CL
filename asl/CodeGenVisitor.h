@@ -41,7 +41,6 @@
 
 // using namespace std;
 
-
 //////////////////////////////////////////////////////////////////////
 // Class CodeGenVisitor: derived from AslBaseVisitor.
 // The tree visitor go through the parser tree and call the methods of
@@ -53,86 +52,85 @@
 // does not have an associated task, it does not have to be visited/called
 // so no redefinition is needed.
 
-class CodeGenVisitor final : public AslBaseVisitor {
+class CodeGenVisitor final : public AslBaseVisitor
+{
 
 public:
+    // Constructor
+    CodeGenVisitor(TypesMgr &Types,
+                   SymTable &Symbols,
+                   TreeDecoration &Decorations);
 
-  // Constructor
-  CodeGenVisitor(TypesMgr       & Types,
-                 SymTable       & Symbols,
-                 TreeDecoration & Decorations);
-
-  // Methods to visit each kind of node:
-  std::any visitProgram(AslParser::ProgramContext *ctx);
-  std::any visitFunction(AslParser::FunctionContext *ctx);
-  std::any visitDeclarations(AslParser::DeclarationsContext *ctx);
-  std::any visitVariable_decl(AslParser::Variable_declContext *ctx);
-  // std::any visitType(AslParser::TypeContext *ctx);
-  std::any visitStatements(AslParser::StatementsContext *ctx);
-  std::any visitAssignStmt(AslParser::AssignStmtContext *ctx);
-  std::any visitIfStmt(AslParser::IfStmtContext *ctx);
-  std::any visitFunctionCallStmt(AslParser::FunctionCallStmtContext *ctx);
-  std::any visitReadStmt(AslParser::ReadStmtContext *ctx);
-  std::any visitWriteExpr(AslParser::WriteExprContext *ctx);
-  std::any visitWriteString(AslParser::WriteStringContext *ctx);
-  // std::any visitLeft_expr(AslParser::Left_exprContext *ctx);
-  std::any visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx);
-  std::any visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx);
-  std::any visitExprIdent(AslParser::ExprIdentContext *ctx);
-  std::any visitArithmetic(AslParser::ArithmeticContext *ctx);
-  std::any visitRelational(AslParser::RelationalContext *ctx);
-  std::any visitIntVal(AslParser::IntValContext *ctx);
-  std::any visitFloatVal(AslParser::FloatValContext *ctx);
-  std::any visitBoolVal(AslParser::BoolValContext *ctx);
-  std::any visitCharVal(AslParser::CharValContext *ctx);
-  std::any visitIdent(AslParser::IdentContext *ctx);
+    // Methods to visit each kind of node:
+    std::any visitProgram(AslParser::ProgramContext *ctx);
+    std::any visitFunction(AslParser::FunctionContext *ctx);
+    std::any visitDeclarations(AslParser::DeclarationsContext *ctx);
+    std::any visitVariable_decl(AslParser::Variable_declContext *ctx);
+    // std::any visitType(AslParser::TypeContext *ctx);
+    std::any visitStatements(AslParser::StatementsContext *ctx);
+    std::any visitAssignStmt(AslParser::AssignStmtContext *ctx);
+    std::any visitIfStmt(AslParser::IfStmtContext *ctx);
+    std::any visitFunctionCallStmt(AslParser::FunctionCallStmtContext *ctx);
+    std::any visitReadStmt(AslParser::ReadStmtContext *ctx);
+    std::any visitWriteExpr(AslParser::WriteExprContext *ctx);
+    std::any visitWriteString(AslParser::WriteStringContext *ctx);
+    // std::any visitLeft_expr(AslParser::Left_exprContext *ctx);
+    std::any visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx);
+    std::any visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx);
+    std::any visitExprIdent(AslParser::ExprIdentContext *ctx);
+    std::any visitArithmetic(AslParser::ArithmeticContext *ctx);
+    std::any visitRelational(AslParser::RelationalContext *ctx);
+    std::any visitIntVal(AslParser::IntValContext *ctx);
+    std::any visitFloatVal(AslParser::FloatValContext *ctx);
+    std::any visitBoolVal(AslParser::BoolValContext *ctx);
+    std::any visitCharVal(AslParser::CharValContext *ctx);
+    std::any visitIdent(AslParser::IdentContext *ctx);
 
 private:
+    // Attributes
+    TypesMgr &Types;
+    SymTable &Symbols;
+    TreeDecoration &Decorations;
+    counters codeCounters;
+    // Current function type (assigned before visit its instructions)
+    TypesMgr::TypeId currFunctionType;
 
-  // Attributes
-  TypesMgr        & Types;
-  SymTable        & Symbols;
-  TreeDecoration  & Decorations;
-  counters          codeCounters;
-  // Current function type (assigned before visit its instructions)
-  TypesMgr::TypeId currFunctionType;
+    // Accessor/Mutator to the type (TypeId) of the current function
+    TypesMgr::TypeId getCurrentFunctionTy() const;
+    void setCurrentFunctionTy(TypesMgr::TypeId type);
 
-  // Accessor/Mutator to the type (TypeId) of the current function
-  TypesMgr::TypeId getCurrentFunctionTy ()                      const;
-  void             setCurrentFunctionTy (TypesMgr::TypeId type);
+    // Getters for the necessary tree node atributes:
+    //   Scope and Type
+    SymTable::ScopeId getScopeDecor(antlr4::ParserRuleContext *ctx) const;
+    TypesMgr::TypeId getTypeDecor(antlr4::ParserRuleContext *ctx) const;
 
-  // Getters for the necessary tree node atributes:
-  //   Scope and Type
-  SymTable::ScopeId getScopeDecor (antlr4::ParserRuleContext *ctx) const;
-  TypesMgr::TypeId  getTypeDecor  (antlr4::ParserRuleContext *ctx) const;
+    //////////////////////////////////////////////////////////////////
+    // Class CodeAttribs: is declared inside CodeGenVisitor as an
+    // auxiliary class to group the three attributes necessaries for
+    // code generation (address, offset, instructions list).
+    // Some language constructions, for example expressions, can
+    // generate the three attributes. Others, like statements, only
+    // generate the instruction list.
+    class CodeAttribs
+    {
 
+    public:
+        // Constructors
+        CodeAttribs(const std::string &addr,
+                    const std::string &offs,
+                    instructionList &code);
+        CodeAttribs(const std::string &addr,
+                    const std::string &offs,
+                    instructionList &&code);
 
-  //////////////////////////////////////////////////////////////////
-  // Class CodeAttribs: is declared inside CodeGenVisitor as an
-  // auxiliary class to group the three attributes necessaries for
-  // code generation (address, offset, instructions list).
-  // Some language constructions, for example expressions, can
-  // generate the three attributes. Others, like statements, only
-  // generate the instruction list.
-  class CodeAttribs {
-    
-  public:
-    // Constructors
-    CodeAttribs(const std::string & addr,
-                const std::string & offs,
-                instructionList & code);
-    CodeAttribs(const std::string & addr,
-                const std::string & offs,
-                instructionList && code);
+        // Attributes (publics):
+        //   - the address that will hold the value of an expression
+        std::string addr;
+        //   - the offset applied to the address (for array access)
+        std::string offs;
+        //   - the three-address code associated to an statement/expression
+        instructionList code;
 
-    // Attributes (publics):
-    //   - the address that will hold the value of an expression
-    std::string addr;
-    //   - the offset applied to the address (for array access)
-    std::string offs;
-    //   - the three-address code associated to an statement/expression
-    instructionList code;
+    }; // class CodeAttribs
 
-  };  // class CodeAttribs
-  
-};  // class CodeGenVisitor
+}; // class CodeGenVisitor

@@ -39,7 +39,7 @@
 #include <string>
 #include <vector>
 
-#include <cstddef>    // std::size_t
+#include <cstddef> // std::size_t
 
 // uncomment the following line to enable debugging messages with DEBUG*
 // #define DEBUG_BUILD
@@ -47,122 +47,144 @@
 
 // using namespace std;
 
-
 // Constructor
-SymbolsVisitor::SymbolsVisitor(TypesMgr       & Types,
-                               SymTable       & Symbols,
-                               TreeDecoration & Decorations,
-                               SemErrors      & Errors) :
-  Types{Types},
-  Symbols{Symbols},
-  Decorations{Decorations},
-  Errors{Errors} {
+SymbolsVisitor::SymbolsVisitor(TypesMgr &Types,
+                               SymTable &Symbols,
+                               TreeDecoration &Decorations,
+                               SemErrors &Errors) : Types{Types},
+                                                    Symbols{Symbols},
+                                                    Decorations{Decorations},
+                                                    Errors{Errors}
+{
 }
 
 // Methods to visit each kind of node:
 //
-std::any SymbolsVisitor::visitProgram(AslParser::ProgramContext *ctx) {
-  DEBUG_ENTER();
-  SymTable::ScopeId sc = Symbols.pushNewScope(SymTable::GLOBAL_SCOPE_NAME);
-  putScopeDecor(ctx, sc);
-  for (auto ctxFunc : ctx->function()) { 
-    visit(ctxFunc);
-  }
-  // Symbols.print();
-  Symbols.popScope();
-  DEBUG_EXIT();
-  return 0;
-}
-
-std::any SymbolsVisitor::visitFunction(AslParser::FunctionContext *ctx) {
-  DEBUG_ENTER();
-  std::string funcName = ctx->ID()->getText();
-  SymTable::ScopeId sc = Symbols.pushNewScope(funcName);
-  putScopeDecor(ctx, sc);
-  // Visitem els paràmetres i el tipus de la funció
-  if (ctx->params()) visit(ctx->params());
-  if (ctx->type()) visit(ctx->type());
-  visit(ctx->declarations());
-  Symbols.popScope();
-  std::string ident = ctx->ID()->getText();
-  if (Symbols.findInCurrentScope(ident)) {
-    Errors.declaredIdent(ctx->ID());
-  }
-  else {
-    std::vector<TypesMgr::TypeId> lParamsTy;
-    if (ctx->params()) {
-      for(std::size_t i = 0; i < ctx->params()->ID().size(); ++i) {
-        TypesMgr::TypeId t1 = getTypeDecor(ctx->params()->type(i));
-        lParamsTy.push_back(t1);
-      }
+std::any SymbolsVisitor::visitProgram(AslParser::ProgramContext *ctx)
+{
+    DEBUG_ENTER();
+    SymTable::ScopeId sc = Symbols.pushNewScope(SymTable::GLOBAL_SCOPE_NAME);
+    putScopeDecor(ctx, sc);
+    for (auto ctxFunc : ctx->function())
+    {
+        visit(ctxFunc);
     }
-    TypesMgr::TypeId tRet;
-    if (ctx->type()) tRet = getTypeDecor(ctx->type());
-    else tRet = Types.createVoidTy();
-    TypesMgr::TypeId tFunc = Types.createFunctionTy(lParamsTy, tRet);
-    Symbols.addFunction(ident, tFunc);
-  }
-  // Symbols.print();
-  DEBUG_EXIT();
-  return 0;
+    // Symbols.print();
+    Symbols.popScope();
+    DEBUG_EXIT();
+    return 0;
 }
 
-std::any SymbolsVisitor::visitDeclarations(AslParser::DeclarationsContext *ctx) {
-  DEBUG_ENTER();
-  visitChildren(ctx);
-  DEBUG_EXIT();
-  return 0;
-}
-
-std::any SymbolsVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx) {
-  DEBUG_ENTER();
-  visit(ctx->type());
-  for (auto ident : ctx->ID()) {
-    if (Symbols.findInCurrentScope(ident->getText())) {
-      // Error si redeclarem variables
-      Errors.declaredIdent(ident);
-  }
-  else {
-      // Mira el tipus de la declaració
-      TypesMgr::TypeId t1 = getTypeDecor(ctx->type());
-      // I afegim la variable a la taula de símbols local
-      Symbols.addLocalVar(ident->getText(), t1);
+std::any SymbolsVisitor::visitFunction(AslParser::FunctionContext *ctx)
+{
+    DEBUG_ENTER();
+    std::string funcName = ctx->ID()->getText();
+    SymTable::ScopeId sc = Symbols.pushNewScope(funcName);
+    putScopeDecor(ctx, sc);
+    // Visitem els paràmetres i el tipus de la funció
+    if (ctx->params())
+        visit(ctx->params());
+    if (ctx->type())
+        visit(ctx->type());
+    visit(ctx->declarations());
+    Symbols.popScope();
+    std::string ident = ctx->ID()->getText();
+    if (Symbols.findInCurrentScope(ident))
+    {
+        Errors.declaredIdent(ctx->ID());
     }
-  }
-  DEBUG_EXIT();
-  return 0;
+    else
+    {
+        std::vector<TypesMgr::TypeId> lParamsTy;
+        if (ctx->params())
+        {
+            for (std::size_t i = 0; i < ctx->params()->ID().size(); ++i)
+            {
+                TypesMgr::TypeId t1 = getTypeDecor(ctx->params()->type(i));
+                lParamsTy.push_back(t1);
+            }
+        }
+        TypesMgr::TypeId tRet;
+        if (ctx->type())
+            tRet = getTypeDecor(ctx->type());
+        else
+            tRet = Types.createVoidTy();
+        TypesMgr::TypeId tFunc = Types.createFunctionTy(lParamsTy, tRet);
+        Symbols.addFunction(ident, tFunc);
+    }
+    // Symbols.print();
+    DEBUG_EXIT();
+    return 0;
 }
 
-std::any SymbolsVisitor::visitBasicType(AslParser::BasicTypeContext *ctx) {
-  DEBUG_ENTER();
-  TypesMgr::TypeId t;
-  if (ctx->INT()) t = Types.createIntegerTy();
-  else if (ctx->FLOAT()) t = Types.createFloatTy();
-  else if (ctx->BOOL()) t = Types.createBooleanTy();
-  else if (ctx->CHAR()) t = Types.createCharacterTy();
-  putTypeDecor(ctx, t);
-  DEBUG_EXIT();
-  return 0;
+std::any SymbolsVisitor::visitDeclarations(AslParser::DeclarationsContext *ctx)
+{
+    DEBUG_ENTER();
+    visitChildren(ctx);
+    DEBUG_EXIT();
+    return 0;
 }
 
-std::any SymbolsVisitor::visitBasicTypeLabel(AslParser::BasicTypeLabelContext *ctx) {
-  DEBUG_ENTER();
-  visit(ctx->basicType());
-  TypesMgr::TypeId t = getTypeDecor(ctx->basicType());
-  putTypeDecor(ctx, t);
-  DEBUG_EXIT();
-  return 0;
+std::any SymbolsVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->type());
+    for (auto ident : ctx->ID())
+    {
+        if (Symbols.findInCurrentScope(ident->getText()))
+        {
+            // Error si redeclarem variables
+            Errors.declaredIdent(ident);
+        }
+        else
+        {
+            // Mira el tipus de la declaració
+            TypesMgr::TypeId t1 = getTypeDecor(ctx->type());
+            // I afegim la variable a la taula de símbols local
+            Symbols.addLocalVar(ident->getText(), t1);
+        }
+    }
+    DEBUG_EXIT();
+    return 0;
 }
 
-std::any SymbolsVisitor::visitArrayType(AslParser::ArrayTypeContext *ctx) {
-  DEBUG_ENTER();
-  visit(ctx->basicType());
-  TypesMgr::TypeId t = getTypeDecor(ctx->basicType());
-  int size = std::stoi(ctx->INTVAL()->getText());
-  TypesMgr::TypeId tRet = Types.createArrayTy(size, t);
-  putTypeDecor(ctx, tRet);
-  DEBUG_EXIT();
-  return 0;
+std::any SymbolsVisitor::visitBasicType(AslParser::BasicTypeContext *ctx)
+{
+    DEBUG_ENTER();
+    TypesMgr::TypeId t;
+    if (ctx->INT())
+        t = Types.createIntegerTy();
+    else if (ctx->FLOAT())
+        t = Types.createFloatTy();
+    else if (ctx->BOOL())
+        t = Types.createBooleanTy();
+    else if (ctx->CHAR())
+        t = Types.createCharacterTy();
+    putTypeDecor(ctx, t);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any SymbolsVisitor::visitBasicTypeLabel(AslParser::BasicTypeLabelContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->basicType());
+    TypesMgr::TypeId t = getTypeDecor(ctx->basicType());
+    putTypeDecor(ctx, t);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any SymbolsVisitor::visitArrayType(AslParser::ArrayTypeContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->basicType());
+    TypesMgr::TypeId t = getTypeDecor(ctx->basicType());
+    int size = std::stoi(ctx->INTVAL()->getText());
+    TypesMgr::TypeId tRet = Types.createArrayTy(size, t);
+    putTypeDecor(ctx, tRet);
+    DEBUG_EXIT();
+    return 0;
 }
 
 // std::any SymbolsVisitor::visitStatements(AslParser::StatementsContext *ctx) {
@@ -256,42 +278,50 @@ std::any SymbolsVisitor::visitArrayType(AslParser::ArrayTypeContext *ctx) {
 //   return r;
 // }
 
-std::any SymbolsVisitor::visitParams(AslParser::ParamsContext *ctx) {
-  DEBUG_ENTER();
-  // Recorrem els paràmetres i el seu tipus
-  for (std::size_t i = 0; i < ctx->ID().size(); ++i) {
-    auto ident = ctx->ID(i);
-    visit(ctx->ID(i));
-    visit(ctx->type(i));
-    if (Symbols.findInCurrentScope(ident->getText())) {
-      // Error si redeclarem variables
-      Errors.declaredIdent(ident);
-    } else {
-      // Mira el tipus de la declaració
-      TypesMgr::TypeId t1 = getTypeDecor(ctx->type(i));
-      // I afegim la variable a la taula de símbols
-      Symbols.addParameter(ident->getText(), t1);
+std::any SymbolsVisitor::visitParams(AslParser::ParamsContext *ctx)
+{
+    DEBUG_ENTER();
+    // Recorrem els paràmetres i el seu tipus
+    for (std::size_t i = 0; i < ctx->ID().size(); ++i)
+    {
+        auto ident = ctx->ID(i);
+        visit(ctx->ID(i));
+        visit(ctx->type(i));
+        if (Symbols.findInCurrentScope(ident->getText()))
+        {
+            // Error si redeclarem variables
+            Errors.declaredIdent(ident);
+        }
+        else
+        {
+            // Mira el tipus de la declaració
+            TypesMgr::TypeId t1 = getTypeDecor(ctx->type(i));
+            // I afegim la variable a la taula de símbols
+            Symbols.addParameter(ident->getText(), t1);
+        }
     }
-  }
-  DEBUG_EXIT();
-  return 0;
+    DEBUG_EXIT();
+    return 0;
 }
-
 
 // Getters for the necessary tree node atributes:
 //   Scope and Type
-SymTable::ScopeId SymbolsVisitor::getScopeDecor(antlr4::ParserRuleContext *ctx) {
-  return Decorations.getScope(ctx);
+SymTable::ScopeId SymbolsVisitor::getScopeDecor(antlr4::ParserRuleContext *ctx)
+{
+    return Decorations.getScope(ctx);
 }
-TypesMgr::TypeId SymbolsVisitor::getTypeDecor(antlr4::ParserRuleContext *ctx) {
-  return Decorations.getType(ctx);
+TypesMgr::TypeId SymbolsVisitor::getTypeDecor(antlr4::ParserRuleContext *ctx)
+{
+    return Decorations.getType(ctx);
 }
 
 // Setters for the necessary tree node attributes:
 //   Scope and Type
-void SymbolsVisitor::putScopeDecor(antlr4::ParserRuleContext *ctx, SymTable::ScopeId s) {
-  Decorations.putScope(ctx, s);
+void SymbolsVisitor::putScopeDecor(antlr4::ParserRuleContext *ctx, SymTable::ScopeId s)
+{
+    Decorations.putScope(ctx, s);
 }
-void SymbolsVisitor::putTypeDecor(antlr4::ParserRuleContext *ctx, TypesMgr::TypeId t) {
-  Decorations.putType(ctx, t);
+void SymbolsVisitor::putTypeDecor(antlr4::ParserRuleContext *ctx, TypesMgr::TypeId t)
+{
+    Decorations.putType(ctx, t);
 }
