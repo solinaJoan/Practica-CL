@@ -1,0 +1,12 @@
+Line 3:11 error: Operator '+' with incompatible types.
+Line 4:4 error: Assignment with incompatible types.
+Line 5:13 error: Secure array access with incompatible expression.
+Line 5:17 error: Array access to a non array operand.
+Line 5:19 error: Identifier 'k' is undeclared.
+Line 6:21 error: Secure array access with incompatible expression.
+Line 17:4 error: Assignment with incompatible types.
+Line 17:36 error: Parameter #2 with incompatible types in call to 'f'.
+Line 18:39 error: Secure array access with incompatible expression.
+Line 20:16 error: Secure array access with incompatible expression.
+Line 20:28 error: Secure array access with incompatible expression.
+Line 20:37 error: Array access with non integer index.
