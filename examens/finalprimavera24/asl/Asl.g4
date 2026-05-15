@@ -76,7 +76,10 @@ statement
         | WRITE STRING ';'                                              # writeString
         | RETURN expr? ';'                                              # return
         | SWAP '(' left_expr ',' left_expr ')' ';'                      # swapStmt
-        | SWITCH expr ':' (CASE expr ':' statements ENDCASE)* (DEFAULT ':' statements)? ENDSWITCH #switchStmt
+        | SWITCH expr ':' cases* (DEFAULT ':' statements)? ENDSWITCH    # switchStmt
+        ;
+
+cases   : CASE expr ':' statements ENDCASE
         ;
 
 // Grammar for left expressions (l-values in C++)
