@@ -100,7 +100,7 @@ if (test `ls -1 $JPDIR/jp*_genc_*.asl 2>/dev/null | wc -l ` -gt 0); then
 
         # exectute test suite
         $BASEDIR/asl/asl $jp >& $JPDIR/$f.student.t
-        $BASEDIR/tvm/tvm $JPDIR/$f.student.t < $JPDIR/$f.in >& $JPDIR/$f.student.out
+        $BASEDIR/tvm/tvm-linux $JPDIR/$f.student.t < $JPDIR/$f.in >& $JPDIR/$f.student.out
 
         # compare produced output with expected output
         if ( ! test -f $JPDIR/$f.out || ! test -s $JPDIR/$f.out); then out="-"

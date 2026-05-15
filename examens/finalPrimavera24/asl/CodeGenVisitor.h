@@ -97,6 +97,7 @@ public:
   std::any visitIdent(AslParser::IdentContext *ctx);
 
   std::any visitSwapStmt(AslParser::SwapStmtContext *ctx);
+  std::any visitSwitchStmt(AslParser::SwitchStmtContext *ctx);
 
 private:
 

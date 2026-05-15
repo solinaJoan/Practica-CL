@@ -734,6 +734,47 @@ std::any CodeGenVisitor::visitSwapStmt(AslParser::SwapStmtContext *ctx) {
 }
 
 
+std::any CodeGenVisitor::visitSwitchStmt(AslParser::SwitchStmtContext *ctx) {
+  instructionList code;
+  CodeAttribs     && codAtsE = std::any_cast<CodeAttribs>(visit(ctx->expr()));
+  std::string          addrE = codAtsE.addr;
+  std::string          offsE = codAtsE.offs;
+  instructionList &    codeE = codAtsE.code;
+  code = codeE;
+
+  // Temporals i labels fixos
+  std::string tempEq = "%" + codeCounters.newTEMP();
+  std::string endswitch = "endswitch" + codeCounters.newLabelIF();
+
+  // Hem de fer un bucle avaluant els casos i si es cert posem el codi i si no el saltem
+  for (auto caseCtx : ctx->cases()) {
+    CodeAttribs     && codAtsCase = std::any_cast<CodeAttribs>(visit(caseCtx->expr()));
+    std::string          addrCase = codAtsCase.addr;
+    instructionList &    codeCase = codAtsCase.code;
+
+    instructionList && codeStatements =  std::any_cast<instructionList>(visit(caseCtx->statements()));
+    std::string label = codeCounters.newLabelIF();
+    std::string labelEndIf = "endif"+label;
+
+    // Per cada cas, si es cert executem el codi
+    code = code || codeCase;
+    code = code || instruction::EQ(tempEq, addrE, addrCase);
+    code = code || instruction::FJUMP(tempEq, labelEndIf);
+    code = code ||  codeStatements;
+    code = code || instruction::UJUMP(endswitch);
+    code = code || instruction::LABEL(labelEndIf);
+  }
+
+  if (ctx->DEFAULT()) {
+    instructionList && codeDefault =  std::any_cast<instructionList>(visit(ctx->statements()));
+    code = code || codeDefault;
+  }
+  code = code || instruction::LABEL(endswitch);
+  DEBUG_EXIT();
+  return code;
+}
+
+
 // Getters for the necessary tree node atributes:
 //   Scope and Type
 SymTable::ScopeId CodeGenVisitor::getScopeDecor(antlr4::ParserRuleContext *ctx) const {
