@@ -568,13 +568,19 @@ std::any TypeCheckVisitor::visitZipStmt(AslParser::ZipStmtContext *ctx) {
     TypesMgr::TypeId tC = getTypeDecor(ctx->expr(2));
     if (not Types.isArrayTy(tA) or not Types.isArrayTy(tB) or not Types.isArrayTy(tC)) {
         Errors.incompatibleArgumentsInZip(ctx);
-    } else if (not Types.equalTypes(Types.getArrayElemType(tA),Types.getArrayElemType(tB)) 
-        or not Types.equalTypes(Types.getArrayElemType(tA),Types.getArrayElemType(tC)) 
-        or not Types.equalTypes(Types.getArrayElemType(tB),Types.getArrayElemType(tC))) {
-        Errors.incompatibleArgumentsInZip(ctx);
-    } else if (Types.getArraySize(tC) != 2*std::min(Types.getArraySize(tA), Types.getArraySize(tB))) {
-        Errors.incompatibleArgumentsInZip(ctx);
-    }
+    } else {
+        if (Types.getArraySize(tC) != 2*std::min(Types.getArraySize(tA), Types.getArraySize(tB))) {
+            Errors.incompatibleArgumentsInZip(ctx);
+        } else {
+            // Son tots arrays i tenen la mida correcta
+            TypesMgr::TypeId tElemA = Types.getArrayElemType(tA);
+            TypesMgr::TypeId tElemB = Types.getArrayElemType(tB);
+            TypesMgr::TypeId tElemC = Types.getArrayElemType(tC);
+            if (not Types.copyableTypes(tElemC, tElemA) or not Types.copyableTypes(tElemC, tElemB)) {
+                Errors.incompatibleArgumentsInZip(ctx);
+            }
+        }
+    } 
     DEBUG_EXIT();
     return 0;
 }

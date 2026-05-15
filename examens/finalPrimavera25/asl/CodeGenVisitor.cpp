@@ -739,21 +739,46 @@ std::any CodeGenVisitor::visitZipStmt(AslParser::ZipStmtContext *ctx) {
   instructionList code;
   CodeAttribs     && codAtsA = std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
   std::string          addrA = codAtsA.addr;
+  instructionList & codeExprA = codAtsA.code;
   CodeAttribs     && codAtsB = std::any_cast<CodeAttribs>(visit(ctx->expr(1)));
   std::string          addrB = codAtsB.addr;
+  instructionList & codeExprB = codAtsB.code;
   CodeAttribs     && codAtsC = std::any_cast<CodeAttribs>(visit(ctx->expr(2)));
   std::string          addrC = codAtsC.addr;
+  instructionList & codeExprC = codAtsC.code;
+  code = codeExprA || codeExprB || codeExprC;
 
+  TypesMgr::TypeId tElemA = Types.getArrayElemType(getTypeDecor(ctx->expr(0)));
+  TypesMgr::TypeId tElemB = Types.getArrayElemType(getTypeDecor(ctx->expr(1)));
+  TypesMgr::TypeId tElemC = Types.getArrayElemType(getTypeDecor(ctx->expr(2)));
+  bool convertA = Types.isIntegerTy(tElemA) and Types.isFloatTy(tElemC);
+  bool convertB = Types.isIntegerTy(tElemB) and Types.isFloatTy(tElemC);
   int sizeC = Types.getArraySize(getTypeDecor(ctx->expr(2)));
-  std::string temp = "%" + codeCounters.newTEMP();
+  // std::cout << "Mida: " <<  sizeC << std::endl;
+  std::string tempidxC = "%" + codeCounters.newTEMP();
+  std::string tempidxAB = "%" + codeCounters.newTEMP();
+  std::string tempRes = "%" + codeCounters.newTEMP();
+  std::string Res = "%" + codeCounters.newTEMP();
+  int idxAB = 0;
   for (int i = 0; i < sizeC; i++) {
     // Process each element
     if (i%2==0) {
-      code = code || instruction::ILOAD(temp, std::to_string(i));
-      code = code || instruction::LOADX(addrC, addrA, temp);
+      // std::cout << "Parell" << std::endl;
+      code = code || instruction::ILOAD(tempidxAB, std::to_string(idxAB));
+      code = code || instruction::LOADX(tempRes, addrA, tempidxAB);
+      if (convertA) code = code || instruction::FLOAT(Res,tempRes);
+      else Res = tempRes;
+      code = code || instruction::ILOAD(tempidxC, std::to_string(i));
+      code = code || instruction::XLOAD(addrC, tempidxC, Res);
     } else {
-      code = code || instruction::ILOAD(temp, std::to_string(i));
-      code = code || instruction::LOADX(addrC, addrB, temp);
+      // std::cout << "Senar" << std::endl;
+      code = code || instruction::ILOAD(tempidxAB, std::to_string(idxAB));
+      code = code || instruction::LOADX(tempRes, addrB, tempidxAB);
+      if (convertB) code = code || instruction::FLOAT(Res,tempRes);
+      else Res = tempRes;
+      code = code || instruction::ILOAD(tempidxC, std::to_string(i));
+      code = code || instruction::XLOAD(addrC, tempidxC, Res);
+      idxAB++;
     }
   }
   DEBUG_EXIT();
