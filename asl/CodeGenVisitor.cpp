@@ -678,6 +678,29 @@ std::any CodeGenVisitor::visitArray(AslParser::ArrayContext *ctx) {
   return codAts;
 }
 
+// std::any CodeGenVisitor::visitXXX(AslParser::XXXContext *ctx) {
+//   DEBUG_ENTER();
+//   instructionList code;
+//   CodeAttribs     && codAts =  std::any_cast<CodeAttribs>(visit(ctx->expr()));
+//   std::string           addrE = codAts.addr;
+//   std::string           offsE = codAts.offs;
+//   instructionList &     codeE = codAts.code;
+//   code = code || codeE;
+
+//   TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr());
+//   std::string temp = "%" + codeCounters.newTEMP();
+
+//   // std::string label = codeCounters.newLabelIF();
+//   // std::string  labelElse = "else"+label;
+//   // std::string labelEndIf = "endif"+label;
+
+//   // std::string label = codeCounters.newLabelWHILE();
+//   // std::string    labelWhile = "while"+label;
+//   // std::string labelEndWhile = "endwhile"+label;
+//   return code;
+// }
+
+
 // Getters for the necessary tree node atributes:
 //   Scope and Type
 SymTable::ScopeId CodeGenVisitor::getScopeDecor(antlr4::ParserRuleContext *ctx) const {
