@@ -681,11 +681,13 @@ std::any CodeGenVisitor::visitArray(AslParser::ArrayContext *ctx) {
 // std::any CodeGenVisitor::visitXXX(AslParser::XXXContext *ctx) {
 //   DEBUG_ENTER();
 //   instructionList code;
-//   CodeAttribs     && codAts =  std::any_cast<CodeAttribs>(visit(ctx->expr()));
-//   std::string           addrE = codAts.addr;
-//   std::string           offsE = codAts.offs;
-//   instructionList &     codeE = codAts.code;
+//   CodeAttribs     && codAtsE =  std::any_cast<CodeAttribs>(visit(ctx->expr()));
+//   std::string           addrE = codAtsE.addr;
+//   std::string           offsE = codAtsE.offs;
+//   instructionList &     codeE = codAtsE.code;
 //   code = code || codeE;
+
+//   instructionList && codeStatements =  std::any_cast<instructionList>(visit(ctx->statements()));
 
 //   TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr());
 //   std::string temp = "%" + codeCounters.newTEMP();
