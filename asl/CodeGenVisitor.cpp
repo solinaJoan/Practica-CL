@@ -699,6 +699,7 @@ std::any CodeGenVisitor::visitArray(AslParser::ArrayContext *ctx) {
 //   // std::string label = codeCounters.newLabelWHILE();
 //   // std::string    labelWhile = "while"+label;
 //   // std::string labelEndWhile = "endwhile"+label;
+//   DEBUG_EXIT();
 //   return code;
 // }
 
