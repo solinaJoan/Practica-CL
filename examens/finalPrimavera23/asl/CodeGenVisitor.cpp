@@ -727,38 +727,41 @@ std::any CodeGenVisitor::visitForeachStmt(AslParser::ForeachStmtContext *ctx) {
   instructionList code;
   CodeAttribs     && codAtsE =  std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
   std::string           addrE = codAtsE.addr;
-  std::string           offsE = codAtsE.offs;
   instructionList &     codeE = codAtsE.code;
 
   CodeAttribs     && codAtsA =  std::any_cast<CodeAttribs>(visit(ctx->expr(1)));
   std::string           addrA = codAtsA.addr;
-  std::string           offsA = codAtsA.offs;
   instructionList &     codeA = codAtsA.code;
 
   instructionList && codeStatements =  std::any_cast<instructionList>(visit(ctx->statements()));
-  
-  code = code || codeE || codeA;
+  code = codeE || codeA;
 
-  TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr(0));
-  TypesMgr::TypeId tArray = getTypeDecor(ctx->expr(1));
+  int size = Types.getArraySize(getTypeDecor(ctx->expr(1)));
+  bool conversion = Types.isFloatTy(getTypeDecor(ctx->expr(0))) and Types.isIntegerTy(Types.getArrayElemType(getTypeDecor(ctx->expr(1))));
 
+  std::string label = codeCounters.newLabelWHILE();
+  std::string foreachLabel = "foreach"+label;
+  std::string endLabel = "end"+label;
   std::string idx = "%" + codeCounters.newTEMP();
-  // Hem de fer un bucle 
-  int size = Types.getArraySize(tArray);
-  for (int i = 0; i < size; ++i) {
-    code = code || instruction::ILOAD(idx, std::to_string(i));
+  std::string jumpCondition = "%" + codeCounters.newTEMP();
+  std::string tConvertion = "%" + codeCounters.newTEMP();
+
+  code = code || instruction::ILOAD(idx, "0");
+  code = code || instruction::LABEL(foreachLabel);
+  code = code || instruction::LT(jumpCondition, idx, std::to_string(size));
+  code = code || instruction::FJUMP(jumpCondition, endLabel);
+  // addrE = addrA[idx]
+  if (conversion) {
+    code = code || instruction::LOADX(tConvertion, addrA, idx);
+    code = code || instruction::FLOAT(addrE, tConvertion);
+  } else {
     code = code || instruction::LOADX(addrE, addrA, idx);
-    code = code || codeStatements;
   }
+  code = code || codeStatements;
+  code = code || instruction::ADD(idx, idx, "1");
+  code = code || instruction::UJUMP(foreachLabel);
+  code = code || instruction::LABEL(endLabel);
 
-
-  // std::string label = codeCounters.newLabelIF();
-  // std::string  labelElse = "else"+label;
-  // std::string labelEndIf = "endif"+label;
-
-  // std::string label = codeCounters.newLabelWHILE();
-  // std::string    labelWhile = "while"+label;
-  // std::string labelEndWhile = "endwhile"+label;
   DEBUG_EXIT();
   return code;
 }
