@@ -553,6 +553,27 @@ std::any TypeCheckVisitor::visitReduceExpr(AslParser::ReduceExprContext *ctx) {
     return 0;
 }
 
+std::any TypeCheckVisitor::visitForeachStmt(AslParser::ForeachStmtContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->expr(0));
+    visit(ctx->expr(1));
+    TypesMgr::TypeId tControl = getTypeDecor(ctx->expr(0));
+    TypesMgr::TypeId tArray = getTypeDecor(ctx->expr(1));
+    if (not Types.isErrorTy(tArray)) {
+        if (not Types.isArrayTy(tArray)) {
+            Errors.arrayIsRequired(ctx);
+        } else {
+            TypesMgr::TypeId tElems = Types.getArrayElemType(tArray);
+            if (not Types.isErrorTy(tControl) and not Types.isErrorTy(tElems) and not Types.copyableTypes(tControl, tElems)) {
+                Errors.foreachIncompatibleArguments(ctx);
+            }
+        }
+    }
+    visit(ctx->statements());
+    DEBUG_EXIT();
+    return 0;
+}
+
 
 // std::any TypeCheckVisitor::visitXXX(AslParser::XXXContext *ctx){
 //     DEBUG_ENTER();

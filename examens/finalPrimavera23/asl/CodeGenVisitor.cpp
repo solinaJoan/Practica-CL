@@ -722,6 +722,47 @@ std::any CodeGenVisitor::visitReduceExpr(AslParser::ReduceExprContext *ctx) {
   return codAts;
 }
 
+std::any CodeGenVisitor::visitForeachStmt(AslParser::ForeachStmtContext *ctx) {
+  DEBUG_ENTER();
+  instructionList code;
+  CodeAttribs     && codAtsE =  std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
+  std::string           addrE = codAtsE.addr;
+  std::string           offsE = codAtsE.offs;
+  instructionList &     codeE = codAtsE.code;
+
+  CodeAttribs     && codAtsA =  std::any_cast<CodeAttribs>(visit(ctx->expr(1)));
+  std::string           addrA = codAtsA.addr;
+  std::string           offsA = codAtsA.offs;
+  instructionList &     codeA = codAtsA.code;
+
+  instructionList && codeStatements =  std::any_cast<instructionList>(visit(ctx->statements()));
+  
+  code = code || codeE || codeA;
+
+  TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr(0));
+  TypesMgr::TypeId tArray = getTypeDecor(ctx->expr(1));
+
+  std::string idx = "%" + codeCounters.newTEMP();
+  // Hem de fer un bucle 
+  int size = Types.getArraySize(tArray);
+  for (int i = 0; i < size; ++i) {
+    code = code || instruction::ILOAD(idx, std::to_string(i));
+    code = code || instruction::LOADX(addrE, addrA, idx);
+    code = code || codeStatements;
+  }
+
+
+  // std::string label = codeCounters.newLabelIF();
+  // std::string  labelElse = "else"+label;
+  // std::string labelEndIf = "endif"+label;
+
+  // std::string label = codeCounters.newLabelWHILE();
+  // std::string    labelWhile = "while"+label;
+  // std::string labelEndWhile = "endwhile"+label;
+  DEBUG_EXIT();
+  return code;
+}
+
 
 // Getters for the necessary tree node atributes:
 //   Scope and Type

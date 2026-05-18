@@ -75,6 +75,7 @@ statement
         | WRITE expr ';'                                                # writeExpr
         | WRITE STRING ';'                                              # writeString
         | RETURN expr? ';'                                              # return
+        | FOREACH expr IN expr DO statements ENDFOR                     # foreachStmt       
         ;
 
 // Grammar for left expressions (l-values in C++)
@@ -156,6 +157,9 @@ ENDFUNC   : 'endfunc' ;
 READ      : 'read' ;
 WRITE     : 'write' ;
 RETURN    : 'return' ;
+FOREACH   : 'foreach' ;
+IN        : 'in' ;
+ENDFOR    : 'endfor' ;
 ARRAY     : 'array' ;
 OF        : 'of' ;
 BOOLVAL   : ('true'|'false') ;

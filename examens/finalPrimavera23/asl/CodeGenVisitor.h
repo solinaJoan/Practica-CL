@@ -97,6 +97,7 @@ public:
   std::any visitIdent(AslParser::IdentContext *ctx);
 
   std::any visitReduceExpr(AslParser::ReduceExprContext *ctx);
+  std::any visitForeachStmt(AslParser::ForeachStmtContext *ctx);
 
 private:
 
