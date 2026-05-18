@@ -66,17 +66,19 @@ public:
   // std::any visitDeclarations(AslParser::DeclarationsContext *ctx);
   // std::any visitVariable_decl(AslParser::Variable_declContext *ctx);
   // std::any visitType(AslParser::TypeContext *ctx);
-  std::any visitStatements(AslParser::StatementsContext *ctx);
+  // std::any visitStatements(AslParser::StatementsContext *ctx);
   std::any visitAssignStmt(AslParser::AssignStmtContext *ctx);
   std::any visitIfStmt(AslParser::IfStmtContext *ctx);
   std::any visitWhileStmt(AslParser::WhileStmtContext *ctx);
-  std::any visitProcCall(AslParser::ProcCallContext *ctx);
   std::any visitReadStmt(AslParser::ReadStmtContext *ctx);
   std::any visitWriteExpr(AslParser::WriteExprContext *ctx);
   std::any visitReturn(AslParser::ReturnContext *ctx);
   // std::any visitWriteString(AslParser::WriteStringContext *ctx);
-  std::any visitLeft_expr(AslParser::Left_exprContext *ctx);
+  // std::any visitLeft_expr(AslParser::Left_exprContext *ctx);
+  std::any visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx);
+  std::any visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx);
   std::any visitParenthesis(AslParser::ParenthesisContext *ctx);
+  std::any visitFunctionCallExpr(AslParser::FunctionCallExprContext *ctx);
   std::any visitFunctionCall(AslParser::FunctionCallContext *ctx);
   std::any visitUnary(AslParser::UnaryContext *ctx);
   std::any visitArithmetic(AslParser::ArithmeticContext *ctx);
@@ -88,12 +90,11 @@ public:
   std::any visitBoolVal(AslParser::BoolValContext *ctx);
   std::any visitCharVal(AslParser::CharValContext *ctx);
   std::any visitExprIdent(AslParser::ExprIdentContext *ctx);
-  std::any visitArrayAccess(AslParser::ArrayAccessContext *ctx);
+  std::any visitArrayAccessExpr(AslParser::ArrayAccessExprContext *ctx);
   std::any visitArray(AslParser::ArrayContext *ctx);
   std::any visitIdent(AslParser::IdentContext *ctx);
 
-  std::any visitForStmt(AslParser::ForStmtContext *ctx);
-  std::any visitReduce(AslParser::ReduceContext *ctx);
+  std::any visitReduceExpr(AslParser::ReduceExprContext *ctx);
 
 private:
 
@@ -114,6 +115,12 @@ private:
   SymTable::ScopeId getScopeDecor    (antlr4::ParserRuleContext *ctx);
   TypesMgr::TypeId  getTypeDecor     (antlr4::ParserRuleContext *ctx);
   bool              getIsLValueDecor (antlr4::ParserRuleContext *ctx);
+
+    // Auxiliary methods to check the properties of types
+  bool allPrimitiveType(const std::vector<TypesMgr::TypeId> & types) const;
+  bool allSameType     (const std::vector<TypesMgr::TypeId> & types) const;
+  bool allNumericType  (const std::vector<TypesMgr::TypeId> & types) const;
+  TypesMgr::TypeId getTypeCoercion (const std::vector<TypesMgr::TypeId> &types) const;
 
   // Setters for the necessary tree node attributes:
   //   Scope, Type ans IsLValue

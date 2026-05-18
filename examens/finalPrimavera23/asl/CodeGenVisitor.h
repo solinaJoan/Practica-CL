@@ -96,6 +96,8 @@ public:
   std::any visitArray(AslParser::ArrayContext *ctx);
   std::any visitIdent(AslParser::IdentContext *ctx);
 
+  std::any visitReduceExpr(AslParser::ReduceExprContext *ctx);
+
 private:
 
   // Attributes

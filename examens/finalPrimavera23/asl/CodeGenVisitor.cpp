@@ -92,6 +92,7 @@ std::any CodeGenVisitor::visitFunction(AslParser::FunctionContext *ctx) {
       if (!isVoid) {
         subr.add_param("_result", Types.to_string(tRet), false);
       }
+      setCurrentFunctionTy(tRet);
   }
   // Parametres de la funcio
   if (ctx->params()) {
@@ -180,13 +181,17 @@ std::any CodeGenVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx) {
   instructionList &     code2 = codAtsE2.code;
   TypesMgr::TypeId tid2 = getTypeDecor(ctx->expr());
   code = code1 || code2;
-  if (offs1 != "") {
-    code = code || instruction::XLOAD(addr1, offs1, addr2);
+  std::string addr2_c = "%" + codeCounters.newTEMP();
+  // Fem el type coercion int-float si cal
+  if (Types.isFloatTy(tid1) and Types.isIntegerTy(tid2)) {
+    code = code || instruction::FLOAT(addr2_c, addr2);
   } else {
-    // Hem de fer la conversio de int a float
-    if (Types.isFloatTy(tid1) and Types.isIntegerTy(tid2)) {
-      code = code || instruction::FLOAT(addr2, addr2);
-    } 
+    addr2_c = addr2;
+  }
+
+  if (offs1 != "") {
+    code = code || instruction::XLOAD(addr1, offs1, addr2_c);
+  } else {
     // Quan son dos arrays, assignem totes les variables de l'array
     if (Types.isArrayTy(tid1) and Types.isArrayTy(tid2)) {
       size_t size = Types.getArraySize(tid1);
@@ -196,12 +201,12 @@ std::any CodeGenVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx) {
         // Carreguem index a un temporal
         code = code || instruction::ILOAD(tempIdx, std::to_string(i));
         // Carreguem a un temporal el valor
-        code = code || instruction::LOADX(tempVal, addr2, tempIdx);
+        code = code || instruction::LOADX(tempVal, addr2_c, tempIdx);
         // Emmagatzemem al destí: addr1[i] = tempVal
         code = code || instruction::XLOAD(addr1, tempIdx, tempVal);
       }
     } else {
-      code = code || instruction::LOAD(addr1, addr2);
+      code = code || instruction::LOAD(addr1, addr2_c);
     }
   }
   DEBUG_EXIT();
@@ -364,8 +369,19 @@ std::any CodeGenVisitor::visitReturn(AslParser::ReturnContext *ctx) {
     CodeAttribs && codAtsE = std::any_cast<CodeAttribs>(visit(ctx->expr()));
     std::string   addr1 = codAtsE.addr;
     instructionList & code1 = codAtsE.code;
+    // Hem de fer type coercion int-float si cal
+    TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr());
+    TypesMgr::TypeId tFunc = getCurrentFunctionTy();
+    std::string addr1_c = "%" + codeCounters.newTEMP();
+    code = code1;
+    if (Types.isFloatTy(tFunc) and Types.isIntegerTy(tExpr)) {
+      // std::cout << "Coercion int to float in return statement of function " << Types.to_string(tFunc) << std::endl;
+      code = code || instruction::FLOAT(addr1_c, addr1);
+    } else {
+      addr1_c = addr1;
+    }
     // Escrivim el valor de l'expressio al parametre reservat per el retorn
-    code = code1 || instruction::LOAD("_result", addr1);
+    code = code || instruction::LOAD("_result", addr1_c);
   }
   code = code || instruction::RETURN();
   DEBUG_EXIT();
@@ -661,6 +677,51 @@ std::any CodeGenVisitor::visitArray(AslParser::ArrayContext *ctx) {
   DEBUG_EXIT();
   return codAts;
 }
+
+std::any CodeGenVisitor::visitReduceExpr(AslParser::ReduceExprContext *ctx) {
+  DEBUG_ENTER();
+  instructionList code;
+  CodeAttribs && codAtsArray = std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
+  std::string       addrArray = codAtsArray.addr;
+  instructionList & codeArray = codAtsArray.code;
+  CodeAttribs && codAtsFunc = std::any_cast<CodeAttribs>(visit(ctx->expr(1)));
+  std::string       addrFunc = codAtsFunc.addr;
+  instructionList & codeFunc = codAtsFunc.code;
+  code = codeArray || codeFunc;
+  TypesMgr::TypeId tArray = getTypeDecor(ctx->expr(0));
+  int size = Types.getArraySize(tArray);
+  std::string name = ctx->expr(1)->getText();
+
+  // Si l'array té mida 1 descartem el codi de la funció i retornem A[0]
+  if (size < 2) {
+    CodeAttribs codAts(addrArray, "", codeArray);
+    return codAts;
+  }
+
+  std::string idx = "%" + codeCounters.newTEMP();
+  std::string arrayElem = "%" + codeCounters.newTEMP();
+  std::string accum = "%" + codeCounters.newTEMP();
+  code = code || instruction::LOAD(accum, addrArray);
+
+  // Si no, fem tota la crida reduce
+  for (int i = 1; i < size; ++i) {
+    code = code || instruction::ILOAD(idx, std::to_string(i));
+    code = code || instruction::LOADX(arrayElem, addrArray, idx);
+    // Cridem la funcio amb l'acumulador i el valor carregat de l'array
+    code = code || instruction::PUSH();
+    code = code || instruction::PUSH(accum);
+    code = code || instruction::PUSH(arrayElem);
+    code = code || instruction::CALL(name);
+    code = code || instruction::POP();
+    code = code || instruction::POP();
+    code = code || instruction::POP(accum);
+  }
+
+  CodeAttribs codAts(accum, "", code);
+  DEBUG_EXIT();
+  return codAts;
+}
+
 
 // Getters for the necessary tree node atributes:
 //   Scope and Type
