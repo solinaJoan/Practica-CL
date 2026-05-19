@@ -99,7 +99,7 @@ std::any CodeGenVisitor::visitFunction(AslParser::FunctionContext *ctx) {
     for (std::size_t i = 0; i < ctx->params()->ID().size(); ++i) {
       std::string name = ctx->params()->ID(i)->getText();
       TypesMgr::TypeId   tParam = getTypeDecor(ctx->params()->type(i));
-      bool isArray = Types.isArrayTy(tParam);
+      bool isArray = Types.isArrayTy(tParam) or Types.isMatrixTy(tParam);
       if (isArray) {
         subr.add_param(name, Types.to_string(Types.getArrayElemType(tParam)), isArray);
       } else {
@@ -143,6 +143,12 @@ std::any CodeGenVisitor::visitVariable_decl(AslParser::Variable_declContext *ctx
       std::size_t      sizeElems = Types.getSizeOfType(tElem);
       std::size_t      size = Types.getArraySize(t1)*sizeElems;
       var onevar = var{varID->getText(), Types.to_string(Types.getArrayElemType(t1)), size};
+      lvars.push_back(onevar);
+    } else if (Types.isMatrixTy(t1)) {
+      TypesMgr::TypeId tElem = Types.getMatrixElemType(t1);
+      std::size_t      sizeElems = Types.getSizeOfType(tElem);
+      std::size_t      size = Types.getMatrixRows(t1)*Types.getMatrixCols(t1)*sizeElems;
+      var onevar = var{varID->getText(), Types.to_string(Types.getMatrixElemType(t1)), size};
       lvars.push_back(onevar);
     }
     else {
@@ -194,10 +200,10 @@ std::any CodeGenVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx) {
   } else {
     // Quan son dos arrays, assignem totes les variables de l'array
     if (Types.isArrayTy(tid1) and Types.isArrayTy(tid2)) {
+      std::string tempIdx = "%" + codeCounters.newTEMP();
+      std::string tempVal = "%" + codeCounters.newTEMP();
       size_t size = Types.getArraySize(tid1);
       for (size_t i = 0; i < size; ++i) {
-        std::string tempIdx = "%" + codeCounters.newTEMP();
-        std::string tempVal = "%" + codeCounters.newTEMP();
         // Carreguem index a un temporal
         code = code || instruction::ILOAD(tempIdx, std::to_string(i));
         // Carreguem a un temporal el valor
@@ -205,6 +211,28 @@ std::any CodeGenVisitor::visitAssignStmt(AslParser::AssignStmtContext *ctx) {
         // Emmagatzemem al destí: addr1[i] = tempVal
         code = code || instruction::XLOAD(addr1, tempIdx, tempVal);
       }
+    } else if (Types.isMatrixTy(tid1) and Types.isMatrixTy(tid2)) {
+      size_t rows = Types.getMatrixRows(tid1);
+      size_t cols = Types.getMatrixCols(tid1);
+      std::string idxRow = "%" + codeCounters.newTEMP();
+      std::string idxCol = "%" + codeCounters.newTEMP();
+      std::string offset = "%" + codeCounters.newTEMP();
+      std::string tempVal = "%" + codeCounters.newTEMP();
+      for (size_t i = 0; i < rows; ++i) {
+        for (size_t j = 0; j < cols; ++j) {
+          // Carreguem indexs a un temporal
+          code = code || instruction::ILOAD(idxRow, std::to_string(i));
+          code = code || instruction::ILOAD(idxCol, std::to_string(j));
+          // Calculem offset = i*cols + j
+          code = code || instruction::MUL(offset, idxRow, std::to_string(cols));
+          code = code || instruction::ADD(offset, offset, idxCol);
+          // Carreguem a un temporal el valor
+          code = code || instruction::LOADX(tempVal, addr2_c, offset);
+          // Emmagatzemem al destí: addr1[i][j] = tempVal
+          code = code || instruction::XLOAD(addr1, offset, tempVal);
+        }
+      }
+
     } else {
       code = code || instruction::LOAD(addr1, addr2_c);
     }
@@ -645,6 +673,13 @@ std::any CodeGenVisitor::visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx
   return codAts; 
 }
 
+std::any CodeGenVisitor::visitMatrixLeftExpr(AslParser::MatrixLeftExprContext *ctx) {
+  DEBUG_ENTER();
+  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->matrix()));
+  DEBUG_EXIT();
+  return codAts; 
+}
+
 std::any CodeGenVisitor::visitArrayAccessExpr(AslParser::ArrayAccessExprContext *ctx) {
   DEBUG_ENTER();
   CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->array()));
@@ -653,6 +688,20 @@ std::any CodeGenVisitor::visitArrayAccessExpr(AslParser::ArrayAccessExprContext 
   instructionList code = codAts.code;
   std::string temp = "%" + codeCounters.newTEMP();
   code = code || instruction::LOADX(temp, addrArray, addrIndex);
+
+  CodeAttribs codAtsResult(temp, "", code);
+  DEBUG_EXIT();
+  return codAtsResult;
+}
+
+std::any CodeGenVisitor::visitMatrixAccessExpr(AslParser::MatrixAccessExprContext *ctx) {
+  DEBUG_ENTER();
+  CodeAttribs && codAts = std::any_cast<CodeAttribs>(visit(ctx->matrix()));
+  std::string addrMatrix = codAts.addr;
+  std::string offset = codAts.offs;
+  instructionList code = codAts.code;
+  std::string temp = "%" + codeCounters.newTEMP();
+  code = code || instruction::LOADX(temp, addrMatrix, offset);
 
   CodeAttribs codAtsResult(temp, "", code);
   DEBUG_EXIT();
@@ -674,6 +723,48 @@ std::any CodeGenVisitor::visitArray(AslParser::ArrayContext *ctx) {
 
   // Retornem només addr=nom_array, offs=index
   CodeAttribs codAts(addrIdent, addrExpr, code);
+  DEBUG_EXIT();
+  return codAts;
+}
+
+std::any CodeGenVisitor::visitMatrix(AslParser::MatrixContext *ctx) {
+  DEBUG_ENTER();
+  instructionList code;
+
+  CodeAttribs && codAtsIdent = std::any_cast<CodeAttribs>(visit(ctx->ident()));
+  std::string       addrIdent = codAtsIdent.addr;
+  instructionList & codeIdent = codAtsIdent.code;
+
+  CodeAttribs && codAtsExpr = std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
+  std::string       addrExpr = codAtsExpr.addr;
+  instructionList & codeExpr = codAtsExpr.code;
+
+  CodeAttribs && codAtsExpr2 = std::any_cast<CodeAttribs>(visit(ctx->expr(1)));
+  std::string       addrExpr2 = codAtsExpr2.addr;
+  instructionList & codeExpr2 = codAtsExpr2.code;
+  code = codeIdent || codeExpr || codeExpr2;
+
+  TypesMgr::TypeId tMatrix = getTypeDecor(ctx->ident());
+  std::size_t rowSize = Types.getMatrixRows(tMatrix);
+  std::size_t colSize = Types.getMatrixCols(tMatrix);
+
+  std::string matrixSize = "%" + codeCounters.newTEMP();
+  std::string offset = "%" + codeCounters.newTEMP();
+  std::string jumpCondition = "%" + codeCounters.newTEMP();
+  std::string label = codeCounters.newLabelIF();
+  std::string indexOk = "indexOk"+label;
+
+  code = code || instruction::MUL(offset, addrExpr, std::to_string(colSize));
+  code = code || instruction::ADD(offset, offset, addrExpr2);
+
+  code = code || instruction::ILOAD(matrixSize, std::to_string(colSize*rowSize));
+  code = code || instruction::LT(jumpCondition, offset, matrixSize);
+  code = code || instruction::NOT(jumpCondition, jumpCondition);
+  code = code || instruction::FJUMP(jumpCondition, indexOk);
+  code = code || instruction::HALT(code::INDEX_OUT_OF_RANGE);
+  code = code || instruction::LABEL(indexOk);
+  // Retornem només addr=nom_array, offs=index
+  CodeAttribs codAts(addrIdent, offset, code);
   DEBUG_EXIT();
   return codAts;
 }

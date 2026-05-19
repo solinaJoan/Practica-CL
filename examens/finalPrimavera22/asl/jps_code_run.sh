@@ -16,4 +16,4 @@ EX=$(printf "%02d" "$1")
 make >/dev/null
 
 ./asl < ../jps/jp_genc_${EX}.asl > ../jps/jp_genc_${EX}.asm
-../tvm/tvm-linux ../jps/jp_genc_${EX}.asm < ../jps/jp_genc_${EX}.in 
+../tvm/tvm-linux ../jps/jp_genc_${EX}.asm < ../jps/jp_genc_${EX}.in | diff -y - ../jps/jp_genc_${EX}.out

@@ -56,8 +56,9 @@ basicType
         | CHAR
         ;
 
-type    : basicType                             # basicTypeLabel
-        | ARRAY '[' INTVAL ']' OF basicType     # arrayType
+type    : basicType                                        # basicTypeLabel
+        | ARRAY '[' INTVAL ']' OF basicType                # arrayType
+        | MATRIX '[' INTVAL ',' INTVAL']' OF basicType     # matrixType 
         ;
         
 statements
@@ -81,6 +82,7 @@ statement
 left_expr 
         : array                                          # arrayLeftExpr                              
         | ident                                          # identLeftExpr  
+        | matrix                                         # matrixLeftExpr
         ;
 
 // Grammar for expressions with boolean, relational and aritmetic operators
@@ -88,6 +90,7 @@ expr    : expr op= '!'                                   # factorialExpr
         | '(' expr ')'                                   # parenthesis
         | functionCall                                   # functionCallExpr
         | array                                          # arrayAccessExpr
+        | matrix                                         # matrixAccessExpr
         | op=(PLUS|MINUS) expr                           # unary
         | op=NOT expr                                    # not
         | expr op=(MUL|DIV|MOD) expr                     # arithmetic
@@ -106,6 +109,9 @@ expr    : expr op= '!'                                   # factorialExpr
 array   : ident '[' expr ']'
         ;
 
+matrix  : ident '[' expr ',' expr ']'
+        ;
+
 // Identifiers
 ident   : ID
         ;
@@ -121,6 +127,8 @@ functionCall
 //////////////////////////////////////////////////
 /// Lexer Rules
 //////////////////////////////////////////////////
+
+MATRIX    : 'matrix' ;
 
 NOT       : 'not' ;
 AND       : 'and' ;

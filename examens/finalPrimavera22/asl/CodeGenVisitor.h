@@ -80,6 +80,7 @@ public:
   std::any visitWriteString(AslParser::WriteStringContext *ctx);
   std::any visitReturn(AslParser::ReturnContext *ctx);
   std::any visitArrayLeftExpr(AslParser::ArrayLeftExprContext *ctx);
+  std::any visitMatrixLeftExpr(AslParser::MatrixLeftExprContext *ctx);
   std::any visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx);
   std::any visitExprIdent(AslParser::ExprIdentContext *ctx);
   std::any visitParenthesis(AslParser::ParenthesisContext *ctx);
@@ -93,7 +94,9 @@ public:
   std::any visitBoolVal(AslParser::BoolValContext *ctx);
   std::any visitCharVal(AslParser::CharValContext *ctx);
   std::any visitArrayAccessExpr(AslParser::ArrayAccessExprContext *ctx);
+  std::any visitMatrixAccessExpr(AslParser::MatrixAccessExprContext *ctx);
   std::any visitArray(AslParser::ArrayContext *ctx);
+  std::any visitMatrix(AslParser::MatrixContext *ctx);
   std::any visitIdent(AslParser::IdentContext *ctx);
 
   std::any visitFactorialExpr(AslParser::FactorialExprContext *ctx);

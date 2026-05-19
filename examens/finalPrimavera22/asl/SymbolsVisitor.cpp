@@ -165,6 +165,19 @@ std::any SymbolsVisitor::visitArrayType(AslParser::ArrayTypeContext *ctx) {
   return 0;
 }
 
+std::any SymbolsVisitor::visitMatrixType(AslParser::MatrixTypeContext *ctx) {
+  DEBUG_ENTER();
+  visit(ctx->basicType());
+  TypesMgr::TypeId t = getTypeDecor(ctx->basicType());
+  int size1 = std::stoi(ctx->INTVAL(0)->getText());
+  int size2 = std::stoi(ctx->INTVAL(1)->getText());
+  TypesMgr::TypeId tRet = Types.createMatrixTy(size1, size2, t);
+  putTypeDecor(ctx, tRet);
+  DEBUG_EXIT();
+  return 0;
+}
+
+
 // std::any SymbolsVisitor::visitStatements(AslParser::StatementsContext *ctx) {
 //   DEBUG_ENTER();
 //   std::any r = visitChildren(ctx);

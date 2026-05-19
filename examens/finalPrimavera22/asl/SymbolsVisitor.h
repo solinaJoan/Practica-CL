@@ -67,6 +67,7 @@ public:
   std::any visitBasicType(AslParser::BasicTypeContext *ctx);
   std::any visitBasicTypeLabel(AslParser::BasicTypeLabelContext *ctx);
   std::any visitArrayType(AslParser::ArrayTypeContext *ctx);
+  std::any visitMatrixType(AslParser::MatrixTypeContext *ctx);
   // std::any visitStatements(AslParser::StatementsContext *ctx);
   // std::any visitAssignStmt(AslParser::AssignStmtContext *ctx);
   // std::any visitIfStmt(AslParser::IfStmtContext *ctx);

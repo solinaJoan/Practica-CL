@@ -255,6 +255,16 @@ std::any TypeCheckVisitor::visitArrayLeftExpr(AslParser::ArrayLeftExprContext *c
     return 0;
 }
 
+std::any TypeCheckVisitor::visitMatrixLeftExpr(AslParser::MatrixLeftExprContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->matrix());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->matrix());
+    putTypeDecor(ctx, t1);
+    putIsLValueDecor(ctx, true);
+    DEBUG_EXIT();
+    return 0;
+}
+
 std::any TypeCheckVisitor::visitIdentLeftExpr(AslParser::IdentLeftExprContext *ctx) {
     DEBUG_ENTER();
     visit(ctx->ident());
@@ -505,6 +515,46 @@ std::any TypeCheckVisitor::visitArray(AslParser::ArrayContext *ctx)
     if (not Types.isErrorTy(tExpr) and not Types.isIntegerTy(tExpr))
         Errors.nonIntegerIndexInArrayAccess(ctx->expr());
     
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitMatrixAccessExpr(AslParser::MatrixAccessExprContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->matrix());
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->matrix());
+    putTypeDecor(ctx, t1);
+    putIsLValueDecor(ctx, false);
+    DEBUG_EXIT();
+    return 0;
+}
+
+std::any TypeCheckVisitor::visitMatrix(AslParser::MatrixContext *ctx)
+{
+    DEBUG_ENTER();
+    visit(ctx->ident());
+    visit(ctx->expr(0));
+    visit(ctx->expr(1));
+    TypesMgr::TypeId tMatrix = getTypeDecor(ctx->ident());
+    TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr(0));
+    TypesMgr::TypeId tExpr2 = getTypeDecor(ctx->expr(1));
+    
+    if (not Types.isErrorTy(tMatrix)) {
+        if (not Types.isMatrixTy(tMatrix)) {
+            Errors.nonMatrixInMatrixAccess(ctx->ident());
+        } else {
+            TypesMgr::TypeId tElemArray = Types.getMatrixElemType(tMatrix);
+            putTypeDecor(ctx, tElemArray);
+        }
+    } 
+    
+    if (not Types.isErrorTy(tExpr) and not Types.isIntegerTy(tExpr))
+        Errors.nonIntegerIndexInMatrixAccess(ctx->expr(0));
+    
+    if (not Types.isErrorTy(tExpr2) and not Types.isIntegerTy(tExpr2))
+        Errors.nonIntegerIndexInMatrixAccess(ctx->expr(1));
+
     DEBUG_EXIT();
     return 0;
 }
