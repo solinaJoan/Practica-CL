@@ -586,7 +586,7 @@ std::any TypeCheckVisitor::visitFactorialExpr(AslParser::FactorialExprContext *c
     DEBUG_ENTER();
     visit(ctx->expr());
     TypesMgr::TypeId tExpr = getTypeDecor(ctx->expr());
-    if (not Types.isIntegerTy(tExpr)) {
+    if (not Types.isErrorTy(tExpr) and not Types.isIntegerTy(tExpr)) {
         Errors.incompatibleOperator(ctx->op);
     }
     putTypeDecor(ctx, Types.createIntegerTy());

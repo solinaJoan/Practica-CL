@@ -735,35 +735,55 @@ std::any CodeGenVisitor::visitMatrix(AslParser::MatrixContext *ctx) {
   std::string       addrIdent = codAtsIdent.addr;
   instructionList & codeIdent = codAtsIdent.code;
 
-  CodeAttribs && codAtsExpr = std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
-  std::string       addrExpr = codAtsExpr.addr;
-  instructionList & codeExpr = codAtsExpr.code;
+  CodeAttribs && codAts_i = std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
+  std::string       addr_i = codAts_i.addr;
+  instructionList & code_i= codAts_i.code;
 
-  CodeAttribs && codAtsExpr2 = std::any_cast<CodeAttribs>(visit(ctx->expr(1)));
-  std::string       addrExpr2 = codAtsExpr2.addr;
-  instructionList & codeExpr2 = codAtsExpr2.code;
-  code = codeIdent || codeExpr || codeExpr2;
+  CodeAttribs && codAts_j = std::any_cast<CodeAttribs>(visit(ctx->expr(1)));
+  std::string       addr_j = codAts_j.addr;
+  instructionList & code_j = codAts_j.code;
+
+  code = codeIdent || code_i || code_j;
 
   TypesMgr::TypeId tMatrix = getTypeDecor(ctx->ident());
   std::size_t rowSize = Types.getMatrixRows(tMatrix);
   std::size_t colSize = Types.getMatrixCols(tMatrix);
 
   std::string matrixSize = "%" + codeCounters.newTEMP();
+  std::string matrixRowSize = "%" + codeCounters.newTEMP();
+  std::string matrixColSize = "%" + codeCounters.newTEMP();
   std::string offset = "%" + codeCounters.newTEMP();
   std::string jumpCondition = "%" + codeCounters.newTEMP();
   std::string label = codeCounters.newLabelIF();
   std::string indexOk = "indexOk"+label;
+  std::string i_OK = "i_OK"+label;
+  std::string j_OK = "j_OK"+label;
 
-  code = code || instruction::MUL(offset, addrExpr, std::to_string(colSize));
-  code = code || instruction::ADD(offset, offset, addrExpr2);
-
-  code = code || instruction::ILOAD(matrixSize, std::to_string(colSize*rowSize));
-  code = code || instruction::LT(jumpCondition, offset, matrixSize);
+  
+  code = code || instruction::ILOAD(matrixRowSize, std::to_string(rowSize));
+  code = code || instruction::LT(jumpCondition, addr_i, matrixRowSize);
   code = code || instruction::NOT(jumpCondition, jumpCondition);
-  code = code || instruction::FJUMP(jumpCondition, indexOk);
+  code = code || instruction::FJUMP(jumpCondition, i_OK);
   code = code || instruction::HALT(code::INDEX_OUT_OF_RANGE);
-  code = code || instruction::LABEL(indexOk);
-  // Retornem només addr=nom_array, offs=index
+  
+  code = code || instruction::LABEL(i_OK);
+  code = code || instruction::ILOAD(matrixColSize, std::to_string(colSize));
+  code = code || instruction::LT(jumpCondition, addr_j, matrixColSize);
+  code = code || instruction::NOT(jumpCondition, jumpCondition);
+  code = code || instruction::FJUMP(jumpCondition, j_OK);
+  code = code || instruction::HALT(code::INDEX_OUT_OF_RANGE);
+
+  // Mirar si l'offset es menor que la mida
+  // code = code || instruction::ILOAD(matrixSize, std::to_string(colSize*rowSize));
+  // code = code || instruction::LT(jumpCondition, offset, matrixSize);
+  // code = code || instruction::NOT(jumpCondition, jumpCondition);
+  // code = code || instruction::FJUMP(jumpCondition, indexOk);
+  // code = code || instruction::HALT(code::INDEX_OUT_OF_RANGE);
+
+  code = code || instruction::LABEL(j_OK);
+  code = code || instruction::MUL(offset, addr_i, std::to_string(colSize));
+  code = code || instruction::ADD(offset, offset, addr_j);
+  
   CodeAttribs codAts(addrIdent, offset, code);
   DEBUG_EXIT();
   return codAts;
