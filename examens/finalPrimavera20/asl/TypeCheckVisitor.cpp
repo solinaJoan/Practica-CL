@@ -552,6 +552,36 @@ std::any TypeCheckVisitor::visitSumExpr(AslParser::SumExprContext *ctx) {
     return 0;
 }
 
+std::any TypeCheckVisitor::visitFilterExpr(AslParser::FilterExprContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->expr(0));
+    visit(ctx->expr(1));
+    visit(ctx->expr(2));
+    TypesMgr::TypeId tA = getTypeDecor(ctx->expr(0));
+    TypesMgr::TypeId tB = getTypeDecor(ctx->expr(1));
+    TypesMgr::TypeId tFunc = getTypeDecor(ctx->expr(2));
+    
+    if (Types.isArrayTy(tA) and Types.isArrayTy(tB) and Types.isFunctionTy(tFunc)) {
+        std::size_t sizeA = Types.getArraySize(tA);
+        std::size_t sizeB = Types.getArraySize(tB);
+        std::size_t numParameters = Types.getNumOfParameters(tFunc);
+
+        TypesMgr::TypeId tElemA = Types.getArrayElemType(tA);
+        TypesMgr::TypeId tElemB = Types.getArrayElemType(tB);
+        TypesMgr::TypeId tParam = Types.getFuncParamsTypes(tFunc)[0];
+        TypesMgr::TypeId tRet = Types.getFuncReturnType(tFunc);
+
+        if (sizeA != sizeB or numParameters != 1 or not Types.isBooleanTy(tElemB) or not Types.isBooleanTy(tRet) or not Types.equalTypes(tParam, tElemA)) {
+            Errors.incompatibleOperator(ctx->op);
+        }
+    } else {
+        Errors.incompatibleOperator(ctx->op);
+    }
+    putTypeDecor(ctx, Types.createIntegerTy());
+    DEBUG_EXIT();
+    return 0;
+}
+
 
 // std::any TypeCheckVisitor::visitXXX(AslParser::XXXContext *ctx){
 //     DEBUG_ENTER();

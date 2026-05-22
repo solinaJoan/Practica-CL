@@ -49,11 +49,16 @@ BASEDIR=$(readlink -f `dirname $0`)
 JPDIR=$BASEDIR/jps
 
 # build interpreter
-pushd $BASEDIR/asl > /dev/null
+pushd $BASEDIR >/dev/null
+cp -r asl common /tmp
+pushd /tmp/asl
 make pristine
 make antlr
-make
+make -j 10
+if (test $? == 0); then cp asl $BASEDIR/asl; fi
 popd > /dev/null
+popd > /dev/null
+rm -rf /tmp/asl /tmp/common
 
 # inicialitzar comptadors
 if (test $MODE != "examen"); then
@@ -72,7 +77,7 @@ if (test `ls -1 $JPDIR/jp*_chkt_*.asl 2>/dev/null | wc -l ` -gt 0); then
         f=`basename $jp .asl`
 
         # execute test suite
-        $BASEDIR/asl/asl $jp |& egrep "^L|^l" >& $JPDIR/$f.student.err
+        $BASEDIR/asl/asl $jp |& grep -E "^L|^l" >& $JPDIR/$f.student.err
 
         # compare produced errors with expected errors
         if (diff -q -s $JPDIR/$f.err $JPDIR/$f.student.err &>/dev/null ); then err="OK"
@@ -95,10 +100,10 @@ if (test `ls -1 $JPDIR/jp*_genc_*.asl 2>/dev/null | wc -l ` -gt 0); then
 
         # exectute test suite
         $BASEDIR/asl/asl $jp >& $JPDIR/$f.student.t
-        $BASEDIR/tvm/tvm $JPDIR/$f.student.t < $JPDIR/$f.in &> $JPDIR/$f.student.out
+        $BASEDIR/tvm/tvm-linux $JPDIR/$f.student.t < $JPDIR/$f.in >& $JPDIR/$f.student.out
 
         # compare produced output with expected output
-        if ( ! test -f $JPDIR/$f.out || ! test -s $JPDIR/$f.out); then out="NO"
+        if ( ! test -f $JPDIR/$f.out || ! test -s $JPDIR/$f.out); then out="-"
         elif ( diff -q -s $JPDIR/$f.out $JPDIR/$f.student.out &>/dev/null ); then out="OK"
         else out="NO"
         fi

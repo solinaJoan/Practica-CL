@@ -95,6 +95,8 @@ public:
   std::any visitIdent(AslParser::IdentContext *ctx);
 
   std::any visitSumExpr(AslParser::SumExprContext *ctx);
+  std::any visitFilterExpr(AslParser::FilterExprContext *ctx);
+
 
 private:
 

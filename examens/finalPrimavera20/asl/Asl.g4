@@ -85,6 +85,7 @@ left_expr
 
 // Grammar for expressions with boolean, relational and aritmetic operators
 expr    : op=SUM '(' (expr (',' expr)*)? ')'             # sumExpr
+        | op=FILTER expr INTO expr USING expr               # filterExpr
         | '(' expr ')'                                   # parenthesis
         | functionCall                                   # functionCallExpr
         | array                                          # arrayAccessExpr
@@ -123,6 +124,9 @@ functionCall
 //////////////////////////////////////////////////
 
 SUM       : 'sum';
+FILTER    : 'filter';
+INTO      : 'into';
+USING     : 'using';
 
 NOT       : 'not' ;
 AND       : 'and' ;

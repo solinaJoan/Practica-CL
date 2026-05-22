@@ -759,6 +759,52 @@ std::any CodeGenVisitor::visitSumExpr(AslParser::SumExprContext *ctx) {
   return codAts;
 }
 
+std::any CodeGenVisitor::visitFilterExpr(AslParser::FilterExprContext *ctx) {
+  DEBUG_ENTER();
+  instructionList code;
+  CodeAttribs && codAtsA = std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
+  std::string       addrA = codAtsA.addr;
+  instructionList & codeA = codAtsA.code;
+
+  CodeAttribs && codAtsB = std::any_cast<CodeAttribs>(visit(ctx->expr(1)));
+  std::string       addrB = codAtsB.addr;
+  instructionList & codeB = codAtsB.code;
+
+  CodeAttribs && codAtsFunc = std::any_cast<CodeAttribs>(visit(ctx->expr(2)));
+  std::string       addrFunc = codAtsFunc.addr;
+  instructionList & codeFunc = codAtsFunc.code;
+  code = codeA || codeB || codeFunc;
+
+  TypesMgr::TypeId tA = getTypeDecor(ctx->expr(0));
+
+  int size = Types.getArraySize(tA);
+  std::string funcName = ctx->expr(2)->getText();
+
+  std::string result = "%" + codeCounters.newTEMP();
+  std::string idx = "%" + codeCounters.newTEMP();
+  std::string temp = "%" + codeCounters.newTEMP();
+  
+  code = code || instruction::ILOAD(result, "0");
+  for (int i = 0; i < size; ++i) {
+    // B[idx] = f(A[idx])
+    std::string falseLabel = "falseLabel" + codeCounters.newLabelIF();
+    code = code || instruction::ILOAD(idx, std::to_string(i));
+    code = code || instruction::LOADX(temp, addrA, idx);
+    code = code || instruction::PUSH();
+    code = code || instruction::PUSH(temp);
+    code = code || instruction::CALL(funcName);
+    code = code || instruction::POP();
+    code = code || instruction::POP(temp);
+    code = code || instruction::XLOAD(addrB,idx,temp);
+    code = code || instruction::FJUMP(temp, falseLabel);
+    code = code || instruction::ADD(result, result, "1");
+    code = code || instruction::LABEL(falseLabel);
+  }
+
+  CodeAttribs codAts(result, "", code);
+  DEBUG_EXIT();
+  return codAts;
+}
 
 // std::any CodeGenVisitor::visitXXX(AslParser::XXXContext *ctx) {
 //   DEBUG_ENTER();
