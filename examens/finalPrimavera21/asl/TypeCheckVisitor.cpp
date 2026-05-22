@@ -538,6 +538,38 @@ std::any TypeCheckVisitor::visitIdent(AslParser::IdentContext *ctx)
     return 0;
 }
 
+std::any TypeCheckVisitor::visitMapStmt(AslParser::MapStmtContext *ctx) {
+    DEBUG_ENTER();
+    visit(ctx->expr(0));
+    visit(ctx->expr(1));
+    visit(ctx->expr(2));
+    TypesMgr::TypeId tA = getTypeDecor(ctx->expr(0));
+    TypesMgr::TypeId tB = getTypeDecor(ctx->expr(1));
+    TypesMgr::TypeId tFunc = getTypeDecor(ctx->expr(2));
+    
+    if (not Types.isErrorTy(tA) and not Types.isErrorTy(tB) and not Types.isErrorTy(tFunc)) {
+        if (Types.isArrayTy(tA) and Types.isArrayTy(tB) and Types.isFunctionTy(tFunc)) {
+            std::size_t sizeA = Types.getArraySize(tA);
+            std::size_t sizeB = Types.getArraySize(tB);
+            std::size_t numParameters = Types.getNumOfParameters(tFunc);
+    
+            TypesMgr::TypeId tElemA = Types.getArrayElemType(tA);
+            TypesMgr::TypeId tElemB = Types.getArrayElemType(tB);
+            TypesMgr::TypeId tParam = Types.getFuncParamsTypes(tFunc)[0];
+            TypesMgr::TypeId tRet = Types.getFuncReturnType(tFunc);
+    
+            if (sizeA != sizeB or numParameters != 1 or not Types.copyableTypes(tParam, tElemA) or not Types.copyableTypes(tElemB, tRet)) {
+                Errors.incompatibleMapOperands(ctx);
+            }
+        } else {
+            Errors.incompatibleMapOperands(ctx);
+        }
+    } 
+    DEBUG_EXIT();
+    return 0;
+}
+
+
 // std::any TypeCheckVisitor::visitXXX(AslParser::XXXContext *ctx){
 //     DEBUG_ENTER();
 //     visitChildren(ctx);

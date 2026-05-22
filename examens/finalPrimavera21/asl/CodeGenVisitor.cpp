@@ -744,6 +744,61 @@ std::any CodeGenVisitor::visitArray(AslParser::ArrayContext *ctx) {
   return codAts;
 }
 
+std::any CodeGenVisitor::visitMapStmt(AslParser::MapStmtContext *ctx) {
+  DEBUG_ENTER();
+  instructionList code;
+  CodeAttribs     && codAtsA =  std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
+  std::string           addrA = codAtsA.addr;
+  instructionList &     codeA = codAtsA.code;
+
+  CodeAttribs     && codAtsB =  std::any_cast<CodeAttribs>(visit(ctx->expr(1)));
+  std::string           addrB = codAtsB.addr;
+  instructionList &     codeB = codAtsB.code;
+
+  CodeAttribs     && codAtsFunc =  std::any_cast<CodeAttribs>(visit(ctx->expr(2)));
+  std::string           addrFunc = codAtsFunc.addr;
+  instructionList &     codeFunc = codAtsFunc.code;
+  code = code || codeA || codeB || codeFunc;
+
+  TypesMgr::TypeId tA = getTypeDecor(ctx->expr(0));
+  TypesMgr::TypeId tB = getTypeDecor(ctx->expr(1));
+  TypesMgr::TypeId tFunc = getTypeDecor(ctx->expr(2));
+
+  TypesMgr::TypeId tElemA = Types.getArrayElemType(tA);
+  TypesMgr::TypeId tElemB = Types.getArrayElemType(tB);
+  TypesMgr::TypeId tParam = Types.getFuncParamsTypes(tFunc)[0];
+  TypesMgr::TypeId tRet = Types.getFuncReturnType(tFunc);
+
+  int size = Types.getArraySize(tA);
+  std::string funcName = ctx->expr(2)->getText();
+
+  std::string idx = "%" + codeCounters.newTEMP();
+  std::string temp = "%" + codeCounters.newTEMP();
+  for (int i = 0; i < size; ++i) {
+    // B[idx] = f(A[idx])
+    code = code || instruction::ILOAD(idx, std::to_string(i));
+    code = code || instruction::LOADX(temp, addrA, idx);
+    // Fer Type coercion si cal
+    if (Types.isIntegerTy(tElemA) and Types.isFloatTy(tParam)) {
+      code = code || instruction::FLOAT(temp, temp);
+    }
+    code = code || instruction::PUSH();
+    code = code || instruction::PUSH(temp);
+    code = code || instruction::CALL(funcName);
+    code = code || instruction::POP();
+    code = code || instruction::POP(temp);
+    // Fer type coercion si cal
+    if (Types.isIntegerTy(tRet) and Types.isFloatTy(tElemB)) {
+      code = code || instruction::FLOAT(temp, temp);
+    }
+    code = code || instruction::XLOAD(addrB,idx,temp);
+  }
+  
+  DEBUG_EXIT();
+  return code;
+}
+
+
 // std::any CodeGenVisitor::visitXXX(AslParser::XXXContext *ctx) {
 //   DEBUG_ENTER();
 //   instructionList code;
