@@ -350,8 +350,14 @@ std::any TypeCheckVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx)
                 Errors.incompatibleOperator(ctx->op);
         }
         tRes = Types.createIntegerTy();
-    }
-    else {
+    } else if (ctx->op->getText() == "**") {
+        // El mòdul exigeix estrictament enters
+        if (((not Types.isErrorTy(t1)) and (not Types.isNumericTy(t1))) or
+            ((not Types.isErrorTy(t2)) and (not Types.isIntegerTy(t2)))) {
+                Errors.incompatibleOperator(ctx->op);
+        }
+        tRes = Types.createFloatTy();
+    } else {
         // Multiplicació i divisió permeten qualsevol numèric
         if (((not Types.isErrorTy(t1)) and (not Types.isNumericTy(t1))) or
             ((not Types.isErrorTy(t2)) and (not Types.isNumericTy(t2)))) {

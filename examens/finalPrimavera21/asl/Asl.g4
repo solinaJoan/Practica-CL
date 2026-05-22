@@ -89,7 +89,7 @@ expr    : '(' expr ')'                                   # parenthesis
         | array                                          # arrayAccessExpr
         | op=(PLUS|MINUS) expr                           # unary
         | op=NOT expr                                    # not
-        | expr op=(MUL|DIV|MOD) expr                     # arithmetic
+        | expr op=(POT|MUL|DIV|MOD) expr                 # arithmetic
         | expr op=(PLUS|MINUS) expr                      # arithmetic
         | expr op=(EQ|NE|LT|LE|GT|GE) expr               # relational
         | expr op=AND expr                               # logic
@@ -136,6 +136,7 @@ MINUS     : '-';
 MUL       : '*';
 DIV       : '/';
 MOD       : '%';
+POT       : '**';
 VAR       : 'var';
 INT       : 'int';
 FLOAT     : 'float';
