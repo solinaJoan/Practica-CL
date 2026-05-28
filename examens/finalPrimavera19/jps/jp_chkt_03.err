@@ -1,0 +1,6 @@
+Line 10:7 error: Assignment with incompatible types.
+Line 11:10 error: Operator '>' with incompatible types.
+Line 14:11 error: Operator '.max' with incompatible types.
+Line 15:18 error: Operator '.max' with incompatible types.
+Line 16:7 error: Operator '.max' with incompatible types.
+Line 16:12 error: Operator '-' with incompatible types.

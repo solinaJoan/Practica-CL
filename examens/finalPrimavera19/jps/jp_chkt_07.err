@@ -1,0 +1,5 @@
+Line 12:10 error: Parameter #1 with incompatible types in call to 'f'.
+Line 12:16 error: Operator '%' with incompatible types.
+Line 13:10 error: Operator '+' with incompatible types.
+Line 14:9 error: Identifier 'v' is undeclared.
+Line 14:18 error: Operator '>' with incompatible types.

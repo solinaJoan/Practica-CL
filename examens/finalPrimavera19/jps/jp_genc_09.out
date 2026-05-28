@@ -1,0 +1,6 @@
+a[5] ok
+a[6] ok
+a[7] ok
+a[8] ok
+a[9] ok
+Runtime Error: Line 12:8. Access out of range: a[10]

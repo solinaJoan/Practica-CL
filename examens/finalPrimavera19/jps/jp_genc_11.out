@@ -1,0 +1,10 @@
+a[1]=6
+a[2]=9
+a[3]=14
+a[4]=21
+a[5]=30
+a[6]=41
+a[7]=54
+a[8]=69
+a[9]=86
+Runtime Error: Line 16:8. Access out of range: a[i+1]

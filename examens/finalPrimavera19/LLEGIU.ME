@@ -1,0 +1,35 @@
+
+  Examen de Laboratori de Compiladors   -  Maig 2019
+  ==================================================
+
+  Aquest directori conté el material necessàri per fer l'examen
+
+  * exam-lab-CL-2019.pdf:  Enunciat
+
+  * common:  Mòduls comuns (symtab, type manager, etc).
+             Contenen algunes modificacions necessàries
+             per fer l'examen.
+             NO MODIFIQUEU RES D'AQUEST DIRECTORI
+
+  * jps: Jocs de proves
+        jpbasic_* :  Jocs de proves de la pràctica bàsica
+                     (els mateixos que heu usat durant el curs)
+        jp_* :  Jocs de proves específics de l'examen
+
+  * tvm/tvm: executable de la tvm
+
+  * asl:  Directori on heu de copiar els fitxers de la vostra practica
+          Cal copiar:
+            Asl.g4
+            *Listener.h
+            *Listener.cpp
+          NO SOBREESCRIVIU main.cpp ni Makefile
+
+  * asl/RuntimeError.h : Codi auxiliar per generar l'error de l'examen.
+         Podeu incloure'l o copiar-lo a CodeGenListener.cpp
+
+  * asl/avalua.sh:  Script que compila l'examen, li aplica els JPs 
+                   i diu quins donen el resultat correcte
+
+  * asl/empaqueta.sh:  Script que empaqueta l'examen i crea el fitxer 
+                       que cal pujar al Raco.

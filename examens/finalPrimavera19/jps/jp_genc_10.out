@@ -1,0 +1,6 @@
+a[5]=5
+a[6]=6
+a[7]=7
+a[8]=8
+a[9]=9
+Runtime Error: Line 12:2. Access out of range: a[10]
