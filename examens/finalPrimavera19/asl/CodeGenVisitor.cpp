@@ -34,6 +34,7 @@
 #include "../common/SymTable.h"
 #include "../common/TreeDecoration.h"
 #include "../common/code.h"
+#include "../common/RuntimeError.h"
 
 #include <string>
 #include <cstddef>    // std::size_t
@@ -690,7 +691,7 @@ std::any CodeGenVisitor::visitArray(AslParser::ArrayContext *ctx) {
   instructionList & codeIdent = codAtsIdent.code;
 
   CodeAttribs && codAtsExpr = std::any_cast<CodeAttribs>(visit(ctx->expr()));
-  std::string       addrExpr = codAtsExpr.addr;
+  std::string       addrIdx = codAtsExpr.addr;
   instructionList & codeExpr = codAtsExpr.code;
   code = codeIdent || codeExpr;
 
@@ -699,24 +700,34 @@ std::any CodeGenVisitor::visitArray(AslParser::ArrayContext *ctx) {
 
   std::string tArraySize = "%" + codeCounters.newTEMP();
   std::string tZero = "%" + codeCounters.newTEMP();
-  std::string LT_i = "%" + codeCounters.newTEMP();
+  std::string LT_size = "%" + codeCounters.newTEMP();
   std::string GT_0 = "%" + codeCounters.newTEMP();
   std::string jumpCondition = "%" + codeCounters.newTEMP();
   std::string label = codeCounters.newLabelIF();
-  std::string indexOk = "indexOk"+label;
+  std::string LTSizeLabel = "LTSize"+label;
+  std::string GTZeroLabel = "GTZero"+label;
+
+  instructionList && error = throwRuntimeErrorTCode(ctx);
 
   code = code || instruction::ILOAD(tArraySize, std::to_string(arraySize));
   code = code || instruction::ILOAD(tZero, "0");
-  code = code || instruction::LT(LT_i, addrExpr, tArraySize);
-  code = code || instruction::LT(GT_0, tZero, addrExpr);
-  code = code || instruction::OR(jumpCondition, LT_i, GT_0);
-  code = code || instruction::NOT(jumpCondition, jumpCondition);
-  code = code || instruction::FJUMP(jumpCondition, indexOk);
-  code = code || instruction::HALT(code::INDEX_OUT_OF_RANGE);
-  code = code || instruction::LABEL(indexOk);
+  // LT_size = addrIdx < arraySize
+  code = code || instruction::LT(LT_size, addrIdx, tArraySize);
+  code = code || instruction::NOT(LT_size, LT_size);
+  code = code || instruction::FJUMP(LT_size, LTSizeLabel);
+  code = code || error;
+  // code = code || instruction::HALT(code::INDEX_OUT_OF_RANGE);
+  code = code || instruction::LABEL(LTSizeLabel);
+  // GT_0 = 0 <= addrIdx
+  code = code || instruction::LE(GT_0, tZero, addrIdx);
+  code = code || instruction::NOT(GT_0, GT_0);
+  code = code || instruction::FJUMP(GT_0, GTZeroLabel);
+  code = code || error;
+  /// code = code || instruction::HALT(code::INDEX_OUT_OF_RANGE);
+  code = code || instruction::LABEL(GTZeroLabel);
 
   // Retornem només addr=nom_array, offs=index
-  CodeAttribs codAts(addrIdent, addrExpr, code);
+  CodeAttribs codAts(addrIdent, addrIdx, code);
   DEBUG_EXIT();
   return codAts;
 }
