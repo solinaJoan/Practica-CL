@@ -6,7 +6,7 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-if [ "$1" -lt 1 ] || [ "$1" -gt 14 ]; then
+if [ "$1" -lt 1 ] || [ "$1" -gt 17 ]; then
     echo "L'exemple ha d'estar entre 1 i 14"
     exit 1
 fi
