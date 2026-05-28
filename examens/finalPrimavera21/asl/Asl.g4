@@ -75,6 +75,7 @@ statement
         | WRITE expr ';'                                                # writeExpr
         | WRITE STRING ';'                                              # writeString
         | RETURN expr? ';'                                              # return
+        | MAP expr INTO expr USING expr ';'                             # mapStmt
         ;
 
 // Grammar for left expressions (l-values in C++)
@@ -89,7 +90,8 @@ expr    : '(' expr ')'                                   # parenthesis
         | array                                          # arrayAccessExpr
         | op=(PLUS|MINUS) expr                           # unary
         | op=NOT expr                                    # not
-        | expr op=(MUL|DIV|MOD) expr                     # arithmetic
+        | expr op=POT expr                               # arithmetic
+        | expr op=(POT|MUL|DIV|MOD) expr                 # arithmetic
         | expr op=(PLUS|MINUS) expr                      # arithmetic
         | expr op=(EQ|NE|LT|LE|GT|GE) expr               # relational
         | expr op=AND expr                               # logic
@@ -121,6 +123,10 @@ functionCall
 /// Lexer Rules
 //////////////////////////////////////////////////
 
+MAP       : 'map';
+INTO      : 'into';
+USING     : 'using';
+
 NOT       : 'not' ;
 AND       : 'and' ;
 OR        : 'or' ;       
@@ -136,6 +142,7 @@ MINUS     : '-';
 MUL       : '*';
 DIV       : '/';
 MOD       : '%';
+POT       : '**';
 VAR       : 'var';
 INT       : 'int';
 FLOAT     : 'float';

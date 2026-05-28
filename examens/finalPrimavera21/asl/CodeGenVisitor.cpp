@@ -442,11 +442,33 @@ std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
   TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
 
-  std::string temp = "%"+codeCounters.newTEMP();
+  std::string result = "%"+codeCounters.newTEMP();
   std::string tZero = "%"+codeCounters.newTEMP();
   
-  // Si hi ha algun float, fem la conversió del que no ho sigui
-  if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) {
+  if (ctx->POT()) {
+      std::string powerLabel = "powerLabel" + codeCounters.newLabelWHILE();
+      std::string endPowerLabel = "endPowerLabel" + codeCounters.newLabelWHILE();
+      // result = 1
+      // while exponent
+      // result = result * base
+      // exponent = exponent - 1
+      std::string addr1_f = addr1;
+      if (Types.isIntegerTy(t1)) {
+        addr1_f = "%" + codeCounters.newTEMP();
+        code = code || instruction::FLOAT(addr1_f, addr1);
+      }
+      std::string exp = "%" + codeCounters.newTEMP();
+      code = code || instruction::LOAD(exp, addr2);
+
+      code = code || instruction::FLOAD(result, "1.0");
+      code = code || instruction::LABEL(powerLabel);
+      code = code || instruction::FJUMP(exp, endPowerLabel);
+      code = code || instruction::FMUL(result, result, addr1_f);
+      code = code || instruction::SUB(exp, exp, "1");
+      code = code || instruction::UJUMP(powerLabel);
+      code = code || instruction::LABEL(endPowerLabel);
+
+  } else if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) {
     std::string tZero_f = "%"+codeCounters.newTEMP();
     std::string addr1_f = addr1;
     std::string addr2_f = addr2;
@@ -460,51 +482,52 @@ std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
     }
 
     if (ctx->MUL()) {
-      code = code || instruction::FMUL(temp, addr1_f, addr2_f);
+      code = code || instruction::FMUL(result, addr1_f, addr2_f);
     } else if (ctx->PLUS()) {
-      code = code || instruction::FADD(temp, addr1_f, addr2_f);
+      code = code || instruction::FADD(result, addr1_f, addr2_f);
     } else if (ctx->DIV()) {
       std::string div_by_zero_OK = "div_0_OK_label" + codeCounters.newLabelIF();
       code = code || instruction::FLOAD(tZero_f, "0.0");
-      code = code || instruction::FEQ(temp, addr2_f, tZero_f);
-      code = code || instruction::FJUMP(temp, div_by_zero_OK);
+      code = code || instruction::FEQ(result, addr2_f, tZero_f);
+      code = code || instruction::FJUMP(result, div_by_zero_OK);
       code = code || instruction::HALT(code::INVALID_FLOAT_OPERAND);
       code = code || instruction::LABEL(div_by_zero_OK);
-      code = code || instruction::FDIV(temp, addr1_f, addr2_f);
+      code = code || instruction::FDIV(result, addr1_f, addr2_f);
     } else if (ctx->MINUS()) {
-      code = code || instruction::FSUB(temp, addr1_f, addr2_f);
+      code = code || instruction::FSUB(result, addr1_f, addr2_f);
     } 
   } else {
     if (ctx->MUL()) {
-      code = code || instruction::MUL(temp, addr1, addr2);
+      code = code || instruction::MUL(result, addr1, addr2);
     } else if(ctx->PLUS()) {
-      code = code || instruction::ADD(temp, addr1, addr2);
+      code = code || instruction::ADD(result, addr1, addr2);
     } else if (ctx->DIV()) {
       std::string div_by_zero_OK = "div_0_OK_label" + codeCounters.newLabelIF();
       code = code || instruction::ILOAD(tZero, "0");
-      code = code || instruction::EQ(temp, addr2, tZero);
-      code = code || instruction::FJUMP(temp, div_by_zero_OK);
+      code = code || instruction::EQ(result, addr2, tZero);
+      code = code || instruction::FJUMP(result, div_by_zero_OK);
       code = code || instruction::HALT(code::INVALID_INTEGER_OPERAND);
       code = code || instruction::LABEL(div_by_zero_OK);
-      code = code || instruction::DIV(temp, addr1, addr2);
+      code = code || instruction::DIV(result, addr1, addr2);
     } else if (ctx->MINUS()) {
-      code = code || instruction::SUB(temp, addr1, addr2);
+      code = code || instruction::SUB(result, addr1, addr2);
     } else if (ctx->MOD()) {
       // x%y
-      //                temp = x/y                                   temp = y*temp                    temp = x-temp
+      // result = x/y
+      // result = y*result
+      // result = x-result
       std::string div_by_zero_OK = "div_0_OK_label" + codeCounters.newLabelIF();
-      // Si es zero donem error
       code = code || instruction::ILOAD(tZero, "0");
-      code = code || instruction::EQ(temp, addr2, tZero);
-      code = code || instruction::FJUMP(temp, div_by_zero_OK);
+      code = code || instruction::EQ(result, addr2, tZero);
+      code = code || instruction::FJUMP(result, div_by_zero_OK);
       code = code || instruction::HALT(code::INVALID_INTEGER_OPERAND);
       code = code || instruction::LABEL(div_by_zero_OK);
-      code = code || instruction::DIV(temp, addr1, addr2); 
-      code = code || instruction::MUL(temp, addr2, temp);
-      code = code || instruction::SUB(temp,addr1,temp);
+      code = code || instruction::DIV(result, addr1, addr2); 
+      code = code || instruction::MUL(result, addr2, result);
+      code = code || instruction::SUB(result,addr1,result);
     }
   }
-  CodeAttribs codAts(temp, "", code);
+  CodeAttribs codAts(result, "", code);
   DEBUG_EXIT();
   return codAts;
 }
@@ -720,6 +743,61 @@ std::any CodeGenVisitor::visitArray(AslParser::ArrayContext *ctx) {
   DEBUG_EXIT();
   return codAts;
 }
+
+std::any CodeGenVisitor::visitMapStmt(AslParser::MapStmtContext *ctx) {
+  DEBUG_ENTER();
+  instructionList code;
+  CodeAttribs     && codAtsA =  std::any_cast<CodeAttribs>(visit(ctx->expr(0)));
+  std::string           addrA = codAtsA.addr;
+  instructionList &     codeA = codAtsA.code;
+
+  CodeAttribs     && codAtsB =  std::any_cast<CodeAttribs>(visit(ctx->expr(1)));
+  std::string           addrB = codAtsB.addr;
+  instructionList &     codeB = codAtsB.code;
+
+  CodeAttribs     && codAtsFunc =  std::any_cast<CodeAttribs>(visit(ctx->expr(2)));
+  std::string           addrFunc = codAtsFunc.addr;
+  instructionList &     codeFunc = codAtsFunc.code;
+  code = code || codeA || codeB || codeFunc;
+
+  TypesMgr::TypeId tA = getTypeDecor(ctx->expr(0));
+  TypesMgr::TypeId tB = getTypeDecor(ctx->expr(1));
+  TypesMgr::TypeId tFunc = getTypeDecor(ctx->expr(2));
+
+  TypesMgr::TypeId tElemA = Types.getArrayElemType(tA);
+  TypesMgr::TypeId tElemB = Types.getArrayElemType(tB);
+  TypesMgr::TypeId tParam = Types.getFuncParamsTypes(tFunc)[0];
+  TypesMgr::TypeId tRet = Types.getFuncReturnType(tFunc);
+
+  int size = Types.getArraySize(tA);
+  std::string funcName = ctx->expr(2)->getText();
+
+  std::string idx = "%" + codeCounters.newTEMP();
+  std::string temp = "%" + codeCounters.newTEMP();
+  for (int i = 0; i < size; ++i) {
+    // B[idx] = f(A[idx])
+    code = code || instruction::ILOAD(idx, std::to_string(i));
+    code = code || instruction::LOADX(temp, addrA, idx);
+    // Fer Type coercion si cal
+    if (Types.isIntegerTy(tElemA) and Types.isFloatTy(tParam)) {
+      code = code || instruction::FLOAT(temp, temp);
+    }
+    code = code || instruction::PUSH();
+    code = code || instruction::PUSH(temp);
+    code = code || instruction::CALL(funcName);
+    code = code || instruction::POP();
+    code = code || instruction::POP(temp);
+    // Fer type coercion si cal
+    if (Types.isIntegerTy(tRet) and Types.isFloatTy(tElemB)) {
+      code = code || instruction::FLOAT(temp, temp);
+    }
+    code = code || instruction::XLOAD(addrB,idx,temp);
+  }
+  
+  DEBUG_EXIT();
+  return code;
+}
+
 
 // std::any CodeGenVisitor::visitXXX(AslParser::XXXContext *ctx) {
 //   DEBUG_ENTER();
