@@ -355,12 +355,19 @@ std::any TypeCheckVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx)
         // Multiplicació i divisió permeten qualsevol numèric
         if (((not Types.isErrorTy(t1)) and (not Types.isNumericTy(t1))) or
             ((not Types.isErrorTy(t2)) and (not Types.isNumericTy(t2)))) {
-                Errors.incompatibleOperator(ctx->op);
+                if (Types.isArrayTy(t1) and Types.isArrayTy(t2) and Types.equalTypes(t1, t2) and Types.isNumericTy(Types.getArrayElemType(t1))) {
+                    tRes = Types.getArrayElemType(t1);
+                } else {
+                    Errors.incompatibleOperator(ctx->op);
+                    tRes = Types.createErrorTy();
+                }
         }
-        if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) {
-            tRes = Types.createFloatTy();
-        } else {
-            tRes = Types.createIntegerTy();
+        if (not Types.isArrayTy(t1) and not Types.isArrayTy(t2)) {
+            if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) {
+                tRes = Types.createFloatTy();
+            } else {
+                tRes = Types.createIntegerTy();
+            }
         }
     }
 
@@ -559,7 +566,13 @@ std::any TypeCheckVisitor::visitPair(AslParser::PairContext *ctx){
     if (not Types.isPairTy(tPair)) {
         Errors.nonPairInPairAccess(ctx->ident());
     } else {
-        putTypeDecor(ctx, tPair);
+        if (ctx->FIRST()) {
+            TypesMgr::TypeId tFirst = Types.getFirstPairType(tPair);
+            putTypeDecor(ctx, tFirst);
+        } else {
+            TypesMgr::TypeId tSecond = Types.getSecondPairType(tPair);
+            putTypeDecor(ctx, tSecond);
+        }
     }
     DEBUG_EXIT();
     return 0;

@@ -444,64 +444,85 @@ std::any CodeGenVisitor::visitArithmetic(AslParser::ArithmeticContext *ctx) {
 
   std::string result = "%"+codeCounters.newTEMP();
   std::string tZero = "%"+codeCounters.newTEMP();
-  
-  // Si hi ha algun float, fem la conversió del que no ho sigui
-  if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) {
-    std::string tZero_f = "%"+codeCounters.newTEMP();
-    std::string addr1_f = addr1;
-    std::string addr2_f = addr2;
-    if (!Types.isFloatTy(t1)) {
-        addr1_f = "%" + codeCounters.newTEMP();
-        code = code || instruction::FLOAT(addr1_f, addr1);
+  if (Types.isArrayTy(t1) and Types.isArrayTy(t2)) {
+    int size = Types.getArraySize(t1);
+    std::string idx = "%"+codeCounters.newTEMP();
+    std::string tA_i = "%"+codeCounters.newTEMP();
+    std::string tB_i = "%"+codeCounters.newTEMP();
+    std::string temp = "%"+codeCounters.newTEMP();
+    if (Types.isIntegerTy(Types.getArrayElemType(t1))) code = code || instruction::ILOAD(result, "0");
+    else code = code || instruction::FLOAD(result, "0.0");
+    for (int i = 0; i < size; ++i) {
+      code = code || instruction::ILOAD(idx, std::to_string(i));
+      code = code || instruction::LOADX(tA_i, addr1, idx);
+      code = code || instruction::LOADX(tB_i, addr2, idx);
+      if (Types.isIntegerTy(Types.getArrayElemType(t1))) {
+        code = code || instruction::MUL(temp, tA_i, tB_i);
+        code = code || instruction::ADD(result, result, temp);
+      } else {
+        code = code || instruction::FMUL(temp, tA_i, tB_i);
+        code = code || instruction::FADD(result, result, temp);
+      } 
     }
-    if (!Types.isFloatTy(t2)) {
-        addr2_f = "%" + codeCounters.newTEMP();
-        code = code || instruction::FLOAT(addr2_f, addr2);
-    }
-
-    if (ctx->MUL()) {
-      code = code || instruction::FMUL(result, addr1_f, addr2_f);
-    } else if (ctx->PLUS()) {
-      code = code || instruction::FADD(result, addr1_f, addr2_f);
-    } else if (ctx->DIV()) {
-      std::string div_by_zero_OK = "div_0_OK_label" + codeCounters.newLabelIF();
-      code = code || instruction::FLOAD(tZero_f, "0.0");
-      code = code || instruction::FEQ(result, addr2_f, tZero_f);
-      code = code || instruction::FJUMP(result, div_by_zero_OK);
-      code = code || instruction::HALT(code::INVALID_FLOAT_OPERAND);
-      code = code || instruction::LABEL(div_by_zero_OK);
-      code = code || instruction::FDIV(result, addr1_f, addr2_f);
-    } else if (ctx->MINUS()) {
-      code = code || instruction::FSUB(result, addr1_f, addr2_f);
-    } 
   } else {
-    if (ctx->MUL()) {
-      code = code || instruction::MUL(result, addr1, addr2);
-    } else if(ctx->PLUS()) {
-      code = code || instruction::ADD(result, addr1, addr2);
-    } else if (ctx->DIV()) {
-      std::string div_by_zero_OK = "div_0_OK_label" + codeCounters.newLabelIF();
-      code = code || instruction::ILOAD(tZero, "0");
-      code = code || instruction::EQ(result, addr2, tZero);
-      code = code || instruction::FJUMP(result, div_by_zero_OK);
-      code = code || instruction::HALT(code::INVALID_INTEGER_OPERAND);
-      code = code || instruction::LABEL(div_by_zero_OK);
-      code = code || instruction::DIV(result, addr1, addr2);
-    } else if (ctx->MINUS()) {
-      code = code || instruction::SUB(result, addr1, addr2);
-    } else if (ctx->MOD()) {
-      // x%y
-      //                result = x/y                                   result = y*result                    result = x-result
-      std::string div_by_zero_OK = "div_0_OK_label" + codeCounters.newLabelIF();
-      // Si es zero donem error
-      code = code || instruction::ILOAD(tZero, "0");
-      code = code || instruction::EQ(result, addr2, tZero);
-      code = code || instruction::FJUMP(result, div_by_zero_OK);
-      code = code || instruction::HALT(code::INVALID_INTEGER_OPERAND);
-      code = code || instruction::LABEL(div_by_zero_OK);
-      code = code || instruction::DIV(result, addr1, addr2); 
-      code = code || instruction::MUL(result, addr2, result);
-      code = code || instruction::SUB(result,addr1,result);
+    // Si hi ha algun float, fem la conversió del que no ho sigui
+    if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) {
+      std::string tZero_f = "%"+codeCounters.newTEMP();
+      std::string addr1_f = addr1;
+      std::string addr2_f = addr2;
+      if (!Types.isFloatTy(t1)) {
+          addr1_f = "%" + codeCounters.newTEMP();
+          code = code || instruction::FLOAT(addr1_f, addr1);
+      }
+      if (!Types.isFloatTy(t2)) {
+          addr2_f = "%" + codeCounters.newTEMP();
+          code = code || instruction::FLOAT(addr2_f, addr2);
+      }
+
+      if (ctx->MUL()) {
+        code = code || instruction::FMUL(result, addr1_f, addr2_f);
+      } else if (ctx->PLUS()) {
+        code = code || instruction::FADD(result, addr1_f, addr2_f);
+      } else if (ctx->DIV()) {
+        std::string div_by_zero_OK = "div_0_OK_label" + codeCounters.newLabelIF();
+        code = code || instruction::FLOAD(tZero_f, "0.0");
+        code = code || instruction::FEQ(result, addr2_f, tZero_f);
+        code = code || instruction::FJUMP(result, div_by_zero_OK);
+        code = code || instruction::HALT(code::INVALID_FLOAT_OPERAND);
+        code = code || instruction::LABEL(div_by_zero_OK);
+        code = code || instruction::FDIV(result, addr1_f, addr2_f);
+      } else if (ctx->MINUS()) {
+        code = code || instruction::FSUB(result, addr1_f, addr2_f);
+      } 
+    } else {
+      if (ctx->MUL()) {
+        code = code || instruction::MUL(result, addr1, addr2);
+      } else if(ctx->PLUS()) {
+        code = code || instruction::ADD(result, addr1, addr2);
+      } else if (ctx->DIV()) {
+        std::string div_by_zero_OK = "div_0_OK_label" + codeCounters.newLabelIF();
+        code = code || instruction::ILOAD(tZero, "0");
+        code = code || instruction::EQ(result, addr2, tZero);
+        code = code || instruction::FJUMP(result, div_by_zero_OK);
+        code = code || instruction::HALT(code::INVALID_INTEGER_OPERAND);
+        code = code || instruction::LABEL(div_by_zero_OK);
+        code = code || instruction::DIV(result, addr1, addr2);
+      } else if (ctx->MINUS()) {
+        code = code || instruction::SUB(result, addr1, addr2);
+      } else if (ctx->MOD()) {
+        // x%y
+        //                result = x/y                                   result = y*result                    result = x-result
+        std::string div_by_zero_OK = "div_0_OK_label" + codeCounters.newLabelIF();
+        // Si es zero donem error
+        code = code || instruction::ILOAD(tZero, "0");
+        code = code || instruction::EQ(result, addr2, tZero);
+        code = code || instruction::FJUMP(result, div_by_zero_OK);
+        code = code || instruction::HALT(code::INVALID_INTEGER_OPERAND);
+        code = code || instruction::LABEL(div_by_zero_OK);
+        code = code || instruction::DIV(result, addr1, addr2); 
+        code = code || instruction::MUL(result, addr2, result);
+        code = code || instruction::SUB(result,addr1,result);
+      }
     }
   }
   CodeAttribs codAts(result, "", code);
