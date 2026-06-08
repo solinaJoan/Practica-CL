@@ -5,12 +5,28 @@ F25: tot fet,
 - zip arrayA and arrayB into arrayC 
 
 F24: tot fet,
-- swap(left_expr, left_expr)
-- switch expr : case expr : statements ... (default : statements)?
+- swap(left_expr, left_expr), tant arrays senceres com tipus normals
+- switch expr : case expr : statements ... (default : statements)?. S'executa la primera instruccio certa
 
 F23: tot fet, 
-- foreach x in array do 
-- reduce(array, funcio);
+- foreach x in array do. Fet amb labels i salts, com el while
+- x = reduce(array, funcio); Cridar la funció tantes vegades com mida del array amb un acumulador. x = f(a,f(an-1,f(...)))
+
+F22: tot fet,
+- Factorial: Fet amb un bucle i labels. Cal inicialitzar tot bé tenint en compte el cas base, i donar error si es negatiu
+- Tipus matriu: Copiar tots els matrixaccess (expr i left_expr), tant a typecheck com a codegen. Tenir en compte els indexsos i el Symbolsvisitor 
+
+F21: tot fet,
+- Potencia: Bucle amb labels i salts segons l'exponent. Tenir en compte que ha d'anar per sobre de la resta d'aritmetics
+- Map A into B using F: Molt semblant al reduce. B[i] = f([A[i]]). Tenir en compte typecoercion
+
+F20: tot fet,
+- sum(expr1,expr2,expr3, ...): Iniciar un acumulador i anar sumant, recorrer la mida del vector de expressions. Tenir en compte typecoercion
+- filter A into B using F: molt semblant a map, B[i] = f(A[i]), i retorna la quantitat de certs que tenim
+
+F19: tot fet,
+- array.max(): retorna el màxim. Inicialitzem un màxim, iterem l'array, i fem un if a cada iteracio
+- Accés segur a arrays (ja implementat a la pràctica principal). Que l'index estigui dins els limis correctes
 
 
 /***************    PARCIALS     **************/
@@ -44,7 +60,8 @@ P20: tot fet,
 - for int in range(1,2,3)/ expr/ array do endfor
 
 
-/***************    ALTRES     **************/
+/***************    UTIILS     **************/
 
 Util commands:
-./asl ../jps/jp_chkt_01.asl | diff -y - ../jps/jp_chkt_01.err
+tar -xzvf ../examen.tgz
+./asl ../examples/jp_chkt_01.asl | diff -y - ../examples/jp_chkt_01.err
